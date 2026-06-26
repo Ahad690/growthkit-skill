@@ -113,6 +113,20 @@ python3 skills/growthkit/scripts/federation/refresh_dataset.py --dry-run
 A real upload requires **both** dropping `--dry-run` and setting `HF_TOKEN`.
 There is no background upload. See [DATA_POLICY.md](DATA_POLICY.md).
 
+**Self-growing, safely.** Each contribution is one new, content-addressed,
+append-only file (`contributions/<author>-<hash>.json`) — it never rewrites
+existing data. A guarded auto-merge bot
+([`automerge.py`](skills/growthkit/scripts/federation/automerge.py), run on a
+daily GitHub Actions cron) merges only purely-additive PRs that clear the full
+guard stack (additive-only → size cap → schema/PII/range/enum + corrupt-ratio →
+anti-abuse) and **holds the rest for a human**. Because a Hugging Face repo is a
+git repo, any merge is one corrective commit from reverted, and consumers can pin
+a known-good revision. The guards prove rows are well-formed, PII-free, in-range,
+and unremarkable — not that the numbers are *authentic*; versioning is the
+recovery half of that story. The auto-merge bot needs a **fine-grained** HF token
+(write + discussions, scoped to just the dataset) stored as the `HF_TOKEN` repo
+secret.
+
 ## Repo layout
 
 ```
@@ -123,9 +137,15 @@ skills/growthkit/
     saas_metrics.py  attribution_estimate.py  funnel_diagnose.py
     compliance.py               # hard gate
     fetch_trends.py             # optional, degrade-gracefully
-    federation/{contribute.py, refresh_dataset.py}
+    federation/                 # opt-in, self-growing community dataset
+      validate.py               # stdlib-only schema/PII/range/abuse guards (single source)
+      contribute.py             # write side: content-addressed append-only PRs
+      refresh_dataset.py        # pull side: validate + dedup + rebuild benchmarks
+      automerge.py              # safe unattended auto-merge bot (guard stack)
+      notifications.py          # config-gated contribution nudge (user-facing)
   references/                   # playbook.md + benchmarks/markets/restricted/config JSON
-tests/                          # 44 tests across all stages
+.github/workflows/automerge.yml # daily cron that runs the auto-merge bot
+tests/                          # 50 tests across all stages
 examples/sample_studio_export.csv
 ```
 

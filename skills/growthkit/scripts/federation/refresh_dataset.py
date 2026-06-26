@@ -23,43 +23,19 @@ import statistics
 import sys
 from typing import Any, Optional
 
-VALID_DATA_TYPES = {"hashtag_trend", "sound_trend", "perf_benchmark"}
-VALID_SOURCES = {"creative_center", "aggregated_owned"}
-REQUIRED = {"platform", "data_type", "industry", "country", "metric_name",
-            "metric_value", "captured_on", "source"}
-
-# Same banned set as contribute — pulled data must also be clean.
-BANNED = {
-    "video_id", "handle", "account", "account_name", "username", "url",
-    "raw_csv", "profile_visits", "install_id", "device_id", "email",
-    "ip", "ip_address", "user_id", "post_id",
-}
+# Single source of truth for schema/guards (stdlib-only), shared with the write
+# side (contribute.py) and the auto-merge bot (automerge.py).
+import validate as _v
 
 
-def validate_row(row: dict[str, Any]) -> bool:
-    """True iff the row is schema-valid, in-range, and free of banned fields."""
-    if not isinstance(row, dict):
-        return False
-    if BANNED & set(row):
-        return False
-    if REQUIRED - set(row):
-        return False
-    if row.get("data_type") not in VALID_DATA_TYPES:
-        return False
-    if row.get("source") not in VALID_SOURCES:
-        return False
-    mv = row.get("metric_value")
-    if not isinstance(mv, (int, float)) or isinstance(mv, bool):
-        return False
-    if mv < 0:
-        return False
-    pd = row.get("period_days", 7)
-    if pd is not None and (not isinstance(pd, (int, float)) or pd <= 0):
-        return False
-    return True
+def validate_row(row: Any) -> bool:
+    """True iff the row is schema-valid, in-range, enum-valid, and PII-free."""
+    ok, _reason = _v.validate_row(row, _v.GROWTHKIT_SCHEMA)
+    return ok
 
 
 def _parse_jsonl(text: str) -> list[Any]:
+    """Parse a JSONL file. Unparseable lines count toward the corrupt ratio."""
     rows: list[Any] = []
     for line in text.splitlines():
         line = line.strip()
@@ -70,6 +46,19 @@ def _parse_jsonl(text: str) -> list[Any]:
         except json.JSONDecodeError:
             rows.append({"__corrupt__": True})  # counts toward corrupt ratio
     return rows
+
+
+def _parse_file(text: str, filename: str) -> list[Any]:
+    """Parse a contribution file. `.json` may be an array or a single object;
+    `.jsonl` is one object per line. Append-only model => one file per
+    contribution (pattern §3)."""
+    if filename.endswith(".jsonl"):
+        return _parse_jsonl(text)
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return [{"__corrupt__": True}]
+    return payload if isinstance(payload, list) else [payload]
 
 
 def partition(rows: list[Any]) -> tuple[list[dict[str, Any]], int]:
@@ -126,7 +115,7 @@ def refresh(
     # 1) Acquire rows (local file for testing/offline; else pull from HF).
     if local_path:
         with open(local_path, encoding="utf-8") as fh:
-            rows = _parse_jsonl(fh.read())
+            rows = _parse_file(fh.read(), local_path)
         origin = f"local:{local_path}"
     else:
         rows, origin = _pull_from_hf(dataset_id)
@@ -178,21 +167,25 @@ def refresh(
 
 
 def _pull_from_hf(dataset_id: str) -> tuple[list[Any], str]:  # pragma: no cover - network
-    """Download dataset JSONL shards from Hugging Face and parse them."""
+    """Download dataset contribution files from Hugging Face and parse them.
+
+    Reads public data with NO token required. Handles both the content-addressed
+    `contributions/*.json` files written by contribute.py and any legacy
+    `*.jsonl` shards."""
     try:
         from huggingface_hub import HfApi, hf_hub_download  # type: ignore
     except Exception:
         return [], "hf_unavailable_no_huggingface_hub"
     try:
-        api = HfApi(token=os.environ.get("HF_TOKEN"))
+        token = os.environ.get("HF_TOKEN")  # optional; reads work unauthenticated
+        api = HfApi(token=token)
         files = [f for f in api.list_repo_files(repo_id=dataset_id, repo_type="dataset")
-                 if f.endswith(".jsonl")]
+                 if f.startswith("contributions/") and (f.endswith(".json") or f.endswith(".jsonl"))]
         rows: list[Any] = []
         for f in files:
-            local = hf_hub_download(repo_id=dataset_id, filename=f, repo_type="dataset",
-                                    token=os.environ.get("HF_TOKEN"))
+            local = hf_hub_download(repo_id=dataset_id, filename=f, repo_type="dataset", token=token)
             with open(local, encoding="utf-8") as fh:
-                rows.extend(_parse_jsonl(fh.read()))
+                rows.extend(_parse_file(fh.read(), f))
         return rows, f"hf:{dataset_id}"
     except Exception as e:
         return [], f"hf_error:{type(e).__name__}"

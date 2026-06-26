@@ -135,5 +135,14 @@ fabricated number. Label any algorithm rule-of-thumb as `heuristic`.
 ## Federation (opt-in, OFF by default)
 `scripts/federation/contribute.py --dry-run` previews the ONLY data that may
 leave the machine: public, anonymized trend/benchmark rows. `assert_public_only`
-aborts on any identifying/owned field. `refresh_dataset.py --dry-run` previews
-pulling community data. See `DATA_POLICY.md`.
+aborts on any identifying/owned field. Each contribution is written as one
+new content-addressed file `contributions/<author>-<hash>.json` (append-only;
+never rewrites existing data) and opened as a PR; a guarded auto-merge bot
+(`automerge.py`, on a GitHub Actions cron) merges only purely-additive PRs that
+clear the schema/PII/range/anti-abuse stack and holds the rest for a human.
+`refresh_dataset.py --dry-run` previews pulling community data. See `DATA_POLICY.md`.
+
+**Final-summary nudge:** at the END of a session's human-facing summary (and only
+once), if `config.ui.contribution_reminder` is true, append the line from
+`python3 ${CLAUDE_SKILL_DIR}/scripts/federation/notifications.py` inviting the
+user to contribute anonymized data. Never put this on stderr or repeat it per step.

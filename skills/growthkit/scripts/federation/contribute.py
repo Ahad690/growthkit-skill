@@ -26,25 +26,23 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
 from typing import Any, Iterable, Optional
 
-SHAREABLE = {
-    "platform", "data_type", "industry", "country", "metric_name",
-    "metric_value", "period_days", "captured_on", "source",
-}
+# Single source of truth for the schema/guards lives in validate.py (stdlib-only),
+# shared with the auto-merge bot and the refresh/pull side.
+from validate import BANNED as _BANNED_LIST
+from validate import SHAREABLE as _SHAREABLE_LIST
+from validate import VALID_DATA_TYPES as _VALID_DATA_TYPES
+from validate import VALID_SOURCES as _VALID_SOURCES
 
-# Any of these in a record => refuse the entire contribution.
-BANNED = {
-    "video_id", "handle", "account", "account_name", "username", "url",
-    "raw_csv", "profile_visits", "install_id", "device_id", "email",
-    "ip", "ip_address", "user_id", "post_id", "views", "likes", "comments",
-}
-
-VALID_DATA_TYPES = {"hashtag_trend", "sound_trend", "perf_benchmark"}
-VALID_SOURCES = {"creative_center", "aggregated_owned"}
+SHAREABLE = set(_SHAREABLE_LIST)
+BANNED = set(_BANNED_LIST)
+VALID_DATA_TYPES = set(_VALID_DATA_TYPES)
+VALID_SOURCES = set(_VALID_SOURCES)
 
 
 def strip_to_shareable(row: dict[str, Any]) -> dict[str, Any]:
@@ -156,16 +154,32 @@ def contribute(
     return report
 
 
+def contribution_path(rows: list[dict[str, Any]], author: str) -> str:
+    """Content-addressed, author-prefixed path. STACK, don't rewrite (pattern §3):
+    one NEW file per contribution so PRs never collide or clobber existing data,
+    and resubmitting identical data is idempotent (same hash -> same filename)."""
+    payload = json.dumps(rows, ensure_ascii=False, sort_keys=True)
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:10]
+    safe_author = "".join(c for c in (author or "anon") if c.isalnum() or c in "-_") or "anon"
+    return f"contributions/{safe_author}-{digest}.json"
+
+
 def _open_hf_pr(rows: list[dict[str, Any]], dataset_id: str, token: str) -> dict[str, Any]:  # pragma: no cover - network
-    """Open a Hugging Face dataset PR appending the new shareable rows."""
+    """Open a Hugging Face dataset PR adding ONE new content-addressed file.
+
+    The file is a JSON array of the shareable rows. The auto-merge bot
+    (automerge.py) merges it only if it is purely additive and clears the guard
+    stack; otherwise it is held for a human. Append-only + git-versioned keeps
+    the blast radius of any merge tiny and one corrective commit from gone."""
     from huggingface_hub import CommitOperationAdd, HfApi  # type: ignore
 
     api = HfApi(token=token)
-    payload = "\n".join(json.dumps(r, ensure_ascii=False, sort_keys=True) for r in rows) + "\n"
-    # Each contribution lands as a separate JSONL shard to avoid clobbering.
-    import hashlib
-    shard = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
-    path_in_repo = f"contributions/{shard}.jsonl"
+    try:
+        author = (api.whoami() or {}).get("name") or "anon"
+    except Exception:  # noqa: BLE001
+        author = "anon"
+    path_in_repo = contribution_path(rows, author)
+    payload = json.dumps(rows, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     op = CommitOperationAdd(path_in_repo=path_in_repo, path_or_fileobj=payload.encode("utf-8"))
     commit = api.create_commit(
         repo_id=dataset_id,

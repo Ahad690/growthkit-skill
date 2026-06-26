@@ -15,7 +15,7 @@ configs:
   - config_name: default
     data_files:
       - split: train
-        path: contributions/*.jsonl
+        path: contributions/*.json
 ---
 
 # GrowthKit Trends
@@ -73,8 +73,31 @@ Each row is one JSON object with exactly these fields:
 | `captured_on` | Date the observation was captured (`YYYY-MM-DD`). |
 | `source` | `creative_center` (public trend fetch) or `aggregated_owned` (anonymized aggregate of a contributor's own data). |
 
-Files live under `contributions/*.jsonl` (one JSON object per line); each
-contribution lands as its own content-addressed shard to avoid clobbering.
+## How the data is stored — stack, don't rewrite
+
+Each contribution is **one new, content-addressed, append-only file** at
+`contributions/<author>-<sha256(payload)[:10]>.json` (a JSON array of rows).
+Two contributors never collide on a path, resubmitting identical data is
+idempotent (same hash → same filename), and merging one PR can never clobber
+another. Because a Hugging Face repo is a git repo, every change is a commit with
+a SHA and any merge is **one corrective commit from being reverted** — consumers
+can also pin a known-good revision so a bad merge never reaches them.
+
+## Auto-merge (safe, unattended)
+
+Clean PRs are merged by a bot ([`automerge.py`](https://github.com/Ahad690/growthkit-skill/blob/main/skills/growthkit/scripts/federation/automerge.py),
+run on a daily GitHub Actions cron). A PR merges **only if it clears every layer**
+of the guard stack — additive-only (no removes/modifies; only new
+`contributions/*.json`), size cap, per-row schema/PII/range/enum validation, a
+corrupt-ratio gate (a single bad row holds the whole PR), and anti-abuse
+heuristics (flooding, group-median outliers). Anything that fails is **commented
+and left open for a human**, never silently dropped.
+
+**Honest boundary:** these gates prove a row is well-formed, PII-free, in-range,
+non-duplicate, and statistically unremarkable. They do **not** prove the numbers
+are *authentic* — a patient adversary could submit plausible fake data. That
+residual risk is why versioning/revert matters: prevention narrows the blast
+radius; git versioning guarantees recovery.
 
 ## License
 

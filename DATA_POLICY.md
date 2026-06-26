@@ -51,13 +51,50 @@ a metric across your posts in a category) — never per-post, never tied to a
   python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
   ```
 
+## How contributions are stored — stack, don't rewrite
+Each contribution is **one new, content-addressed, append-only file** at
+`contributions/<author>-<sha256(payload)[:10]>.json`. Contributors never collide
+on a path, resubmitting identical data is idempotent (same hash → same filename),
+and merging one PR can never clobber another. A Hugging Face repo is a git repo,
+so every change is a commit with a SHA, and any merge is **one corrective commit
+from being reverted**; consumers can pin a known-good revision so a bad merge
+never reaches them.
+
+## Auto-merge bot (safe, unattended)
+Clean PRs are merged by `scripts/federation/automerge.py` (run on a daily GitHub
+Actions cron). A PR merges **only if it clears every layer** of the guard stack:
+
+| Layer | Stops | On fail |
+|------|-------|---------|
+| Additive-only | edits/deletes/overwrites, sneaked-in files (only new `contributions/*.json` allowed) | hold `unsafe_shape` |
+| Size cap | flooding / DoS | hold `too_large` |
+| Schema + PII + range + enum, then corrupt-ratio gate (0.0 ⇒ a single bad row holds the PR) | malformed/PII/out-of-range rows | hold/abort `corrupt` |
+| Anti-abuse | duplicate flooding, group-median outliers vs a trusted reference | hold `suspicious` |
+
+Anything that fails is **commented and left open for a human** — never silently
+dropped. A token gate (no write token ⇒ nothing merges) and `--dry-run` round it out.
+
+**Honest boundary:** these gates prove a row is well-formed, PII-free, in-range,
+non-duplicate, and statistically unremarkable. They do **not** prove the numbers
+are *authentic* — a patient adversary could submit plausible fake data. Prevention
+narrows the blast radius; git versioning (revert + pinned revisions) guarantees
+recovery.
+
+## Token permissions (for the auto-merge bot only)
+Use a **fine-grained** Hugging Face token (NOT an `hf auth login` OAuth token,
+which expires and would silently break the scheduled run), scoped to **only**
+`Ahad690/growthkit-trends`, with: write access to contents/settings (commits /
+merge PRs) and "interact with discussions / open pull requests". Store it as the
+GitHub repo secret `HF_TOKEN`. Reading the public dataset needs no token.
+
 ## Pulling community data
-`refresh_dataset.py` pulls the shared dataset, validates every row (schema +
-range + banned-field check), **refuses** files whose corrupt ratio exceeds
-`max_corrupt_ratio` (default 0.25), **no-ops** below `min_new_on_refresh`
-(default 50), then rebuilds the community benchmark defaults. Community
-benchmarks are labeled `measured` with a coverage-aware confidence
-(`LOW` until a segment has enough rows). Preview with `--dry-run`.
+`refresh_dataset.py` pulls the shared dataset (no token needed to read),
+validates every row (schema + range + enum + banned-field check), **refuses**
+files whose corrupt ratio exceeds `max_corrupt_ratio` (default 0.25), **no-ops**
+below `min_new_on_refresh` (default 50), then rebuilds the community benchmark
+defaults with row-level dedup. Community benchmarks are labeled `measured` with a
+coverage-aware confidence (`LOW` until a segment has enough rows). Preview with
+`--dry-run`.
 
 ## License
 The shared dataset is licensed **CC-BY-4.0** (see `LICENSE-DATA`). Code is MIT

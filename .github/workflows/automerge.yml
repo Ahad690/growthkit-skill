@@ -1,0 +1,35 @@
+# Auto-merge clean contribution PRs to the GrowthKit Hugging Face dataset.
+# Requires a repo secret HF_TOKEN: a FINE-GRAINED token (NOT an `hf auth login`
+# OAuth token, which expires) scoped to ONLY Ahad690/growthkit-trends with:
+#   - Write access to contents/settings (create commits / merge PRs)
+#   - Interact with discussions / Open pull requests (open, comment, merge)
+# Set it with:  gh secret set HF_TOKEN -R Ahad690/growthkit-skill
+name: Auto-merge dataset PRs
+
+on:
+  workflow_dispatch: {}          # manual: gh workflow run "Auto-merge dataset PRs"
+  schedule:
+    - cron: "0 6 * * *"          # daily 06:00 UTC (the automatic trigger)
+
+permissions:
+  contents: read                 # GITHUB_TOKEN scope — unrelated to HF auth
+
+jobs:
+  automerge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install huggingface_hub
+      - name: Auto-merge clean contribution PRs
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Forked-PR runs don't get secrets — no-op cleanly instead of erroring.
+          if [ -z "$HF_TOKEN" ]; then
+            echo "HF_TOKEN secret not set — skipping."; exit 0
+          fi
+          python skills/growthkit/scripts/federation/automerge.py --token "$HF_TOKEN"
+          # add --dry-run above to only report without merging

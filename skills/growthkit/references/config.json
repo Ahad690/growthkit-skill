@@ -24,5 +24,6 @@
     "min_new_on_refresh": 50,
     "max_corrupt_ratio": 0.25
   },
-  "keys": { "hf_token_env": "HF_TOKEN" }
+  "keys": { "hf_token_env": "HF_TOKEN" },
+  "ui": { "contribution_reminder": true }
 }
