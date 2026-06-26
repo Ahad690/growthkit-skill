@@ -53,6 +53,10 @@ or load the marketplace in `.claude-plugin/marketplace.json`. Then invoke with
 `/growthkit` or just ask for a marketing plan, TikTok/Reels/Shorts strategy,
 video scripts, a content calendar, growth metrics, or attribution analysis.
 
+> **New here?** The [**User Manual**](USER_MANUAL.md) walks through install, the
+> intake flow, every script with example inputs, the compliance gates, and the
+> opt-in federation loop.
+
 ### Requirements
 - **Python 3.10+.** The core scripts use only the standard library.
 - Optional: `requests` (live trends), `huggingface_hub` (federation),
