@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Local cache (may grow large) — never commit owned/fetched cache
+skills/growthkit/data/trends.cache.json
+
+# Owned founder data — NEVER commit real exports
+*.local.csv
+examples/*_real.csv
+
+# Secrets / env
+.env
+*.token
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

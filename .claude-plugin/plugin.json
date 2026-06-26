@@ -1,0 +1,10 @@
+{
+  "name": "growthkit",
+  "version": "1.0.0",
+  "description": "Honest short-form-video marketing (TikTok + Reels/Shorts) for SaaS and apps. Positioning, Hook-Value-CTA scripts, content calendars, deterministic SaaS/TikTok metrics, owned-CSV analysis, banded organic-attribution, and a compliance hard gate. Never invents market numbers.",
+  "author": { "name": "GrowthKit contributors" },
+  "homepage": "https://github.com/Ahad690/growthkit-skill",
+  "repository": "https://github.com/Ahad690/growthkit-skill",
+  "license": "MIT",
+  "keywords": ["marketing", "tiktok", "reels", "shorts", "saas", "growth", "content", "attribution"]
+}

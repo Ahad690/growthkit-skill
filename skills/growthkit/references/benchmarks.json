@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "description": "Default benchmark ranges. Each entry is tagged with source + evidence_type (self_reported|measured). Updated by federation/refresh_dataset.py from the community dataset. NONE of these are emitted by the model directly — scripts read them and label provenance.",
+    "schema_version": "1.0"
+  },
+  "plg_conversion": {
+    "freemium": {
+      "free_to_paid_low": 0.02,
+      "free_to_paid_high": 0.05,
+      "source": "industry_reports",
+      "evidence_type": "self_reported"
+    },
+    "free_trial": {
+      "trial_to_paid_low": 0.15,
+      "trial_to_paid_high": 0.25,
+      "source": "industry_reports",
+      "evidence_type": "self_reported"
+    },
+    "reverse_trial": {
+      "trial_to_paid_low": 0.08,
+      "trial_to_paid_high": 0.20,
+      "source": "industry_reports",
+      "evidence_type": "self_reported"
+    }
+  },
+  "saas_metrics": {
+    "ltv_cac_floor": { "value": 3.0, "source": "saas_consensus", "evidence_type": "self_reported" },
+    "cac_payback_max_months": { "value": 12, "source": "saas_consensus", "evidence_type": "self_reported" },
+    "monthly_churn_warn": { "value": 0.03, "source": "saas_consensus", "evidence_type": "self_reported" },
+    "good_annual_logo_churn_high": { "value": 0.10, "source": "saas_consensus", "evidence_type": "self_reported" }
+  },
+  "tiktok_completion_tiers": {
+    "_note": "Algorithm rules-of-thumb. Labeled heuristic; NOT a measured guarantee. Used only for tiering owned-CSV results, never emitted as a fact about the market.",
+    "viral_threshold_pct": { "value": 0.70, "evidence_type": "heuristic", "source": "creator_lore" },
+    "strong_pct": { "value": 0.50, "evidence_type": "heuristic", "source": "creator_lore" },
+    "weak_pct": { "value": 0.30, "evidence_type": "heuristic", "source": "creator_lore" }
+  },
+  "engagement_benchmarks": {
+    "_note": "Default fallback ranges when no community data exists for a segment. Confidence is LOW until federation fills the (industry, country) segment.",
+    "share_rate_good": { "value": 0.01, "evidence_type": "self_reported", "source": "creator_lore" },
+    "save_rate_good": { "value": 0.02, "evidence_type": "self_reported", "source": "creator_lore" }
+  }
+}

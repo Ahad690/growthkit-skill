@@ -1,0 +1,28 @@
+{
+  "intake": { "default_budget": "bootstrapped" },
+  "content": {
+    "pillar_split": { "educational": 0.6, "entertainment": 0.3, "promotional": 0.1 },
+    "hashtags_per_post": [3, 5]
+  },
+  "analyzer": { "three_sec_view_floor": 0.20, "winner_top_n": 10 },
+  "saas_benchmarks": {
+    "ltv_cac_floor": 3.0,
+    "cac_payback_max_months": 12,
+    "monthly_churn_warn": 0.03
+  },
+  "fetch": {
+    "enabled": true,
+    "country_default": "US",
+    "period_days": 7,
+    "use_proxy": false,
+    "cache_ttl_hours": 48
+  },
+  "federation": {
+    "dataset_repo": "https://huggingface.co/datasets/Ahad690/growthkit-trends",
+    "dataset_id": "Ahad690/growthkit-trends",
+    "auto_contribute": false,
+    "min_new_on_refresh": 50,
+    "max_corrupt_ratio": 0.25
+  },
+  "keys": { "hf_token_env": "HF_TOKEN" }
+}

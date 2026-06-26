@@ -1,0 +1,17 @@
+# Core skill scripts (analyzer, metrics, attribution, compliance, funnel) use only
+# the Python 3.10+ standard library — they run with NO third-party dependencies.
+#
+# The packages below are needed ONLY for the optional features noted:
+
+# Optional live-trend fetching (fetch_trends.py). The skill degrades gracefully
+# without it.
+requests>=2.31
+
+# Optional federation (federation/contribute.py, federation/refresh_dataset.py).
+# Only contributors who push/pull the shared dataset need this.
+huggingface_hub>=0.23
+
+# OPTIONAL (not installed by requirements): playwright>=1.40
+#   Only needed for fetch_trends.py signature-header acquisition. Without it,
+#   live trends are unavailable but every other feature works fully.
+#   Install manually with: pip install "playwright>=1.40" && playwright install chromium

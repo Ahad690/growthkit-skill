@@ -1,0 +1,25 @@
+{
+  "_meta": {
+    "description": "Per-country TikTok status + recommended primary short-form platform. status: available|weak|banned. When weak/banned, the skill switches to a Reels/Shorts-native playbook and uses TikTok trends only as a leading indicator. As of 2026-01-22 TikTok US operates under an Oracle-led joint venture.",
+    "schema_version": "1.0",
+    "as_of": "2026-06"
+  },
+  "default": { "status": "available", "primary_platform": "tiktok" },
+  "countries": {
+    "US": { "status": "available", "primary_platform": "tiktok", "note": "operating under Oracle-led JV as of 2026-01-22" },
+    "GB": { "status": "available", "primary_platform": "tiktok" },
+    "CA": { "status": "available", "primary_platform": "tiktok" },
+    "AU": { "status": "available", "primary_platform": "tiktok" },
+    "DE": { "status": "available", "primary_platform": "tiktok" },
+    "FR": { "status": "available", "primary_platform": "tiktok" },
+    "BR": { "status": "available", "primary_platform": "tiktok" },
+    "ID": { "status": "available", "primary_platform": "tiktok", "note": "disclosure compliance tested heavily here" },
+    "MX": { "status": "available", "primary_platform": "tiktok" },
+    "PH": { "status": "available", "primary_platform": "tiktok" },
+    "IN": { "status": "banned", "primary_platform": "reels", "note": "TikTok banned since 2020; Instagram Reels + YouTube Shorts dominate" },
+    "PK": { "status": "banned", "primary_platform": "reels", "note": "repeated bans; unreliable access; default to Reels/Shorts" },
+    "NP": { "status": "weak", "primary_platform": "reels", "note": "intermittent restrictions historically" },
+    "BD": { "status": "weak", "primary_platform": "reels" },
+    "AF": { "status": "banned", "primary_platform": "youtube_shorts" }
+  }
+}

@@ -1,0 +1,6 @@
+video_id,post_date,views,total_play_time_sec,video_duration_sec,avg_watch_time_sec,full_video_watch_rate,likes,comments,shares,saves,profile_visits,traffic_source_breakdown
+v001,2026-05-01,10000,240000,30,24,65%,800,40,200,300,500,"For You 82%; Following 10%; Profile 8%"
+v002,2026-05-03,500,1000,20,2,5%,10,1,2,1,5,"For You 95%; Search 5%"
+v003,2026-05-05,3000,27000,15,9,45%,210,18,30,60,90,"For You 70%; Search 20%; Profile 10%"
+v004,2026-05-08,800,3600,45,4.5,8%,20,2,4,5,8,"For You 90%; Following 10%"
+v005,2026-05-11,50000,400000,10,8,72%,6000,300,1500,2000,3000,"For You 88%; Search 7%; Profile 5%"

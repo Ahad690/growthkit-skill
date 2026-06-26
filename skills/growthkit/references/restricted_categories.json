@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "description": "TikTok restricted / approval-gated product categories. If a founder's category matches, the compliance guard flags it before generating a campaign and adjusts guidance. Informational only, not legal advice; the user verifies their own jurisdiction.",
+    "schema_version": "1.0"
+  },
+  "categories": {
+    "crypto": {
+      "status": "restricted",
+      "detail": "Cryptocurrency, tokens, NFTs and most crypto financial products are prohibited or heavily restricted in paid ads and gated for organic promotion in many regions.",
+      "action": "Avoid paid promotion; for organic, avoid financial-return claims and add risk disclaimers; verify regional eligibility."
+    },
+    "financial_services": {
+      "status": "approval_gated",
+      "detail": "Lending, investing, trading, and 'get rich' financial products require authorization and are subject to claims restrictions.",
+      "action": "No guaranteed-return or income claims; add disclaimers; verify licensing in target market."
+    },
+    "health_supplements": {
+      "status": "approval_gated",
+      "detail": "Health claims, supplements, and weight-management products are restricted; medical/therapeutic claims are prohibited.",
+      "action": "No medical/therapeutic or before-after claims; route product claims through compliant language; verify regional rules."
+    },
+    "healthcare": {
+      "status": "approval_gated",
+      "detail": "Healthcare, telehealth, and medical devices face claims restrictions and may require authorization.",
+      "action": "No diagnostic/cure claims; add disclaimers; verify regional rules."
+    },
+    "alcohol": {
+      "status": "restricted",
+      "detail": "Alcohol promotion is prohibited or age-gated in most markets.",
+      "action": "Avoid promotion; if permitted, age-gate and follow regional law."
+    },
+    "tobacco_vape": {
+      "status": "prohibited",
+      "detail": "Tobacco, vaping, and related products are prohibited.",
+      "action": "Do not promote."
+    },
+    "gambling": {
+      "status": "restricted",
+      "detail": "Gambling and real-money gaming are prohibited or licensing-gated.",
+      "action": "Avoid promotion; verify licensing if permitted."
+    },
+    "weapons": {
+      "status": "prohibited",
+      "detail": "Weapons, ammunition, and related accessories are prohibited.",
+      "action": "Do not promote."
+    },
+    "cbd": {
+      "status": "restricted",
+      "detail": "CBD and cannabis-adjacent products are restricted or prohibited depending on region.",
+      "action": "Avoid promotion; verify regional legality."
+    },
+    "dating": {
+      "status": "approval_gated",
+      "detail": "Dating apps face content and targeting restrictions.",
+      "action": "Follow content guidelines; verify eligibility."
+    }
+  }
+}
