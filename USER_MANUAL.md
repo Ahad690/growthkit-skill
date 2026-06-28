@@ -220,7 +220,7 @@ needs a **fine-grained** HF token (write + discussions, scoped to just
 
 ```powershell
 # PowerShell one-liner (prompts without echoing the token):
-gh secret set HF_TOKEN -R Ahad690/growthkit-skill -b (Read-Host "Paste fine-grained HF token")
+gh secret set HF_TOKEN -R Ahad690/growthkit-skill # `-b` flag allows to see your token in the powershell UI
 ```
 
 ```bash
