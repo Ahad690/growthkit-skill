@@ -19,6 +19,11 @@ skills/growthkit/data/*.tmp
 *.local.csv
 examples/*_real.csv
 
+# Generated per-user deliverables (the skill writes these into the founder's
+# working directory — like fiverr-catalog.html in the sibling project)
+growth-plan.json
+growth-plan.html
+
 # Secrets / env
 .env
 *.token
