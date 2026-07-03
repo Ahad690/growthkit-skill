@@ -9,11 +9,12 @@ largest relative leak is.
 HONESTY (P1/P3): deterministic over user-supplied counts.
 confidence="HIGH", method="deterministic_funnel", sources=["user_input"].
 
-Usage:
+Usage (direct flags — order of --stage flags IS the funnel order):
+    python3 funnel_diagnose.py --stage visitors=10000 --stage signups=1200 \
+        --stage activated=400 --stage paid=60
+or from an ORDERED JSON object:
     python3 funnel_diagnose.py --stages stages.json
-where stages.json is an ORDERED object, e.g.:
-    {"visitors": 10000, "signups": 1200, "activated": 400, "paid": 60, "retained_d30": 30}
-or AARRR named stages. Order is preserved (Python 3.7+ dict order).
+    # {"visitors": 10000, "signups": 1200, "activated": 400, "paid": 60}
 """
 from __future__ import annotations
 
@@ -73,10 +74,28 @@ def diagnose(stages: dict[str, float]) -> dict[str, Any]:
 
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="AARRR/RARRA funnel diagnostic.")
-    p.add_argument("--stages", required=True, help="Path to an ordered JSON object of stage counts")
+    p.add_argument("--stages", help="Path to an ordered JSON object of stage counts")
+    p.add_argument("--stage", action="append", default=[], metavar="NAME=COUNT",
+                   help="A funnel stage, repeatable; flag order = funnel order "
+                        "(e.g. --stage visitors=10000 --stage signups=1200)")
     args = p.parse_args(argv)
-    with open(args.stages, encoding="utf-8") as fh:
-        stages = json.load(fh)
+
+    if args.stages:
+        with open(args.stages, encoding="utf-8") as fh:
+            stages = json.load(fh)
+    elif args.stage:
+        stages = {}
+        for item in args.stage:
+            name, sep, count = item.partition("=")
+            if not sep or not name.strip():
+                p.error(f"bad --stage '{item}' (expected NAME=COUNT)")
+            try:
+                stages[name.strip()] = float(count)
+            except ValueError:
+                p.error(f"bad --stage '{item}' (count must be a number)")
+    else:
+        p.error("provide --stages FILE or repeated --stage NAME=COUNT flags")
+
     print(json.dumps(diagnose(stages), indent=2, ensure_ascii=False))
     return 0
 

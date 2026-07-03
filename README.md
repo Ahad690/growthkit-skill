@@ -40,22 +40,26 @@ precisely (dollar-perfect organic attribution, panel-grade competitor stats).
 | **Attribution** | `attribution_estimate.py` — organic installs | A **band** + confidence + the "deferred deep links ≠ reliable" caveat — never a precise count |
 | **Trends (optional)** | `fetch_trends.py` — Creative Center hashtags | Best-effort; on failure → labeled fallback, never fabricated |
 | **Compliance** | Music / disclosure / restricted-category / repurposing | **Hard gate** in `compliance.py` |
+| **Deliverable** | `build_plan.py` renders the finished `growth-plan.html` | Presentation-only; stamps the disclosure block on any undisclosed promo post |
 | **Federation (opt-in)** | Share public anonymized trend rows; pull community defaults | `assert_public_only` aborts on any identifying field |
 
 ## Install
 
-```bash
-git clone https://github.com/Ahad690/growthkit-skill.git
+```
+/plugin marketplace add Ahad690/growthkit-skill
+/plugin install growthkit@growthkit-marketplace
 ```
 
-Add it as a Claude Code plugin/skill (the skill lives in `skills/growthkit/`),
-or load the marketplace in `.claude-plugin/marketplace.json`. Then invoke with
-`/growthkit` or just ask for a marketing plan, TikTok/Reels/Shorts strategy,
-video scripts, a content calendar, growth metrics, or attribution analysis.
+Then just describe what you're building — *"help me grow my study app on
+TikTok"* — or run `/growthkit`. The skill asks one set of intake questions,
+plans in conversation, runs its deterministic scripts on the numbers you give
+it, and finishes by writing **`growth-plan.html`**: your positioning, the
+week-by-week script calendar with copy buttons, a metrics table with provenance
+per row, and the compliance checklist. No input files, no keys, no setup.
 
-> **New here?** The [**User Manual**](USER_MANUAL.md) walks through install, the
-> intake flow, every script with example inputs, the compliance gates, and the
-> opt-in federation loop.
+> **New here?** The [**User Manual**](USER_MANUAL.md) walks through your first
+> run, the three data layers, reading the output envelopes, and the opt-in
+> federation loop.
 
 ### Requirements
 - **Python 3.10+.** The core scripts use only the standard library.
@@ -136,10 +140,11 @@ secret.
 ```
 skills/growthkit/
   SKILL.md                      # orchestration + the honesty spine
-  scripts/                      # deterministic, real-data-only
+  scripts/                      # deterministic, real-data-only (direct CLI flags)
     analyze_studio_csv.py       # ground truth
     saas_metrics.py  attribution_estimate.py  funnel_diagnose.py
     compliance.py               # hard gate
+    build_plan.py               # renders the growth-plan.html deliverable
     fetch_trends.py             # optional, degrade-gracefully
     federation/                 # opt-in, self-growing community dataset
       validate.py               # stdlib-only schema/PII/range/abuse guards (single source)
@@ -149,7 +154,7 @@ skills/growthkit/
       notifications.py          # config-gated contribution nudge (user-facing)
   references/                   # playbook.md + benchmarks/markets/restricted/config JSON
 .github/workflows/automerge.yml # daily cron that runs the auto-merge bot
-tests/                          # 50 tests across all stages
+tests/                          # 72 tests across all stages
 examples/sample_studio_export.csv
 ```
 

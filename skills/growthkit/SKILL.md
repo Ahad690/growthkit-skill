@@ -50,10 +50,16 @@ TikTok growth metrics, or app-install / attribution analysis. Runnable as
 
 ## Workflow
 
+You orchestrate everything in conversation — the founder never authors an input
+file or runs a command. Scripts take direct CLI flags; you pass the founder's
+numbers straight from their answers. The run ends with a rendered
+`growth-plan.html` deliverable (Step 7).
+
 ### Step 1 — Intake & branch (FR1–FR2)
-Ask ONCE, in a single message, for: product one-liner; B2C or B2B; primary
-market/country; whether the audience is on TikTok; stage (pre-PMF / growth);
-budget (default: bootstrapped); existing handles/links (optional, **local only**).
+Ask ONCE, in a single numbered message, for: product one-liner; B2C or B2B;
+primary market/country; whether the audience is on TikTok; stage (pre-PMF /
+growth); budget (default: bootstrapped); existing handles/links (optional,
+**local only**).
 
 Then read `${CLAUDE_SKILL_DIR}/references/markets.json`. If the country's status
 is `weak`/`banned`, select the **Reels/Shorts-native** variant and SAY WHY.
@@ -68,7 +74,8 @@ Combine with ICP to pick the playbook: (B2C-install | B2B-leadgen) × (TikTok-na
   ranges, labeled with source + `self_reported`/`measured` + confidence). Do not
   invent ranges.
 - **Funnel diagnosis (FR5):** if the founder gives stage counts, run
-  `funnel_diagnose.py --stages stages.json`; report the deterministic bottleneck.
+  `funnel_diagnose.py --stage visitors=10000 --stage signups=1200 --stage paid=60`
+  (flag order = funnel order); report the deterministic bottleneck.
 
 ### Step 3 — Content (FR6–FR8)
 - **Scripts:** write Hook→Value→CTA using the formulas in `playbook.md`. Include
@@ -92,10 +99,14 @@ Combine with ICP to pick the playbook: (B2C-install | B2B-leadgen) × (TikTok-na
 - **Keyword Insights (FR11):** explicitly unsupported — say so if asked.
 
 ### Step 5 — Measurement
-- **SaaS metrics (FR12):** `saas_metrics.py --inputs inputs.json
+- **SaaS metrics (FR12):** pass the founder's numbers as flags:
+  `saas_metrics.py --spend 1000 --new-customers 50 --arpa-monthly 100
+  --arpu-monthly 100 --gross-margin 0.8 --monthly-churn 0.02
   --benchmarks ${CLAUDE_SKILL_DIR}/references/config.json`. Report CAC, LTV,
   LTV:CAC, payback, K-factor with flags. `confidence: HIGH` (deterministic).
-- **Organic attribution (FR13):** `attribution_estimate.py --signals signals.json`.
+- **Organic attribution (FR13):** pass the owned signals as flags:
+  `attribution_estimate.py --landing-utm-installs 100 --promo-code-redemptions 50
+  --mmp-organic-bucket 400 --survey-tiktok-share 0.3 --total-installs 1000`.
   Present the BAND + confidence + the DDL caveat. Never a single precise number.
 
 ### Step 6 — Compliance gate (FR14–FR17, HARD)
@@ -106,12 +117,27 @@ text. If `ok` is false, DO NOT emit the output — fix the violations first
 (swap to CML/original audio, add the disclosure block, flag/adjust the restricted
 category, replace watermark-reupload advice with the clean-master rule).
 
+### Step 7 — Assemble & render the deliverable
+Write a `growth-plan.json` in the working directory with:
+`product` (name, one_liner, variant, why_variant), `positioning` (statement,
+jtbd, dunford), `pillars` (the split from config), `calendar` (weeks → posts:
+day, pillar, hook, value, cta, on_screen_text, spoken_keywords, hashtags,
+promotional, disclosure, sound_guidance), `metrics` (each script output copied
+VERBATIM as {label, value, low, high, unit, confidence, method, sources, flags} —
+do not alter script numbers), and `compliance` (account_type, category,
+category_flag, notes). Then run:
+`python3 ${CLAUDE_SKILL_DIR}/scripts/build_plan.py growth-plan.json`
+→ `growth-plan.html`. Tell the user where it was written and summarize. The
+renderer stamps the disclosure block onto any promo post missing one, and the
+rendered page carries the contribution banner.
+
 ## Output format
 Every numeric output is shown with its envelope: value (and low/high if a band),
 confidence, method, and sources — e.g.
 `completion_rate: 0.65 (HIGH; owned_studio_csv; sources: owned_csv)`. Prose
 judgment (positioning, scripts) needs no envelope, but must not contain a
-fabricated number. Label any algorithm rule-of-thumb as `heuristic`.
+fabricated number. Label any algorithm rule-of-thumb as `heuristic`. State where
+the deliverable was written (`growth-plan.html`).
 
 ## Error handling
 - **Fetch failure →** present the labeled fallback (`fetch_failed`, `stale_possible`),
@@ -124,7 +150,8 @@ fabricated number. Label any algorithm rule-of-thumb as `heuristic`.
 ## Examples
 1. **B2C-TikTok:** "Help me grow my study app on TikTok (US)." → intake →
    B2C-install × TikTok-native → positioning, 60/30/10 calendar, Hook-Value-CTA
-   scripts with disclosure on promos → offer CSV analysis for measurement.
+   scripts with disclosure on promos → offer CSV analysis for measurement →
+   assemble `growth-plan.json`, render `growth-plan.html`, report the path.
 2. **B2B or Reels/Shorts:** "Grow my B2B SaaS on TikTok" → B2B-leadgen variant
    (education/demo/founder content, lead-gen CTAs, longer-cycle measurement). Or
    "I'm in Pakistan" → markets.json = banned → Reels/Shorts-native, said explicitly.
@@ -142,7 +169,8 @@ never rewrites existing data) and opened as a PR; a guarded auto-merge bot
 clear the schema/PII/range/anti-abuse stack and holds the rest for a human.
 `refresh_dataset.py --dry-run` previews pulling community data. See `DATA_POLICY.md`.
 
-**Final-summary nudge:** at the END of a session's human-facing summary (and only
-once), if `config.ui.contribution_reminder` is true, append the line from
-`python3 ${CLAUDE_SKILL_DIR}/scripts/federation/notifications.py` inviting the
-user to contribute anonymized data. Never put this on stderr or repeat it per step.
+**Contribution nudge:** the rendered `growth-plan.html` already carries the
+banner (config-gated via `ui.contribution_reminder`). Only when a session ends
+WITHOUT a rendered deliverable, append the line from
+`python3 ${CLAUDE_SKILL_DIR}/scripts/federation/notifications.py` once at the end
+of your final human-facing summary. Never put it on stderr or repeat it per step.

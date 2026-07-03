@@ -10,7 +10,10 @@ Provenance: confidence="HIGH" (a direct computation of supplied facts),
 method="deterministic_formula", sources=["user_input"]. The model never emits
 these numbers — this script does.
 
-Usage:
+Usage (direct flags — no input file needed):
+    python3 saas_metrics.py --spend 1000 --new-customers 50 --arpa-monthly 100 \
+        --arpu-monthly 100 --gross-margin 0.8 --monthly-churn 0.02
+or from a JSON file:
     python3 saas_metrics.py --inputs inputs.json [--benchmarks benchmarks.json]
 """
 from __future__ import annotations
@@ -107,12 +110,28 @@ def _r(x: Optional[float]) -> Optional[float]:
 
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Deterministic SaaS metrics calculator.")
-    p.add_argument("--inputs", required=True, help="Path to a JSON file of raw inputs")
+    p.add_argument("--inputs", help="Path to a JSON file of raw inputs (alternative to the flags below)")
     p.add_argument("--benchmarks", help="Optional path to a benchmarks JSON (config.saas_benchmarks shape)")
+    # Direct flags — the skill passes numbers straight from the conversation.
+    p.add_argument("--spend", type=float)
+    p.add_argument("--new-customers", type=float, dest="new_customers")
+    p.add_argument("--arpa-monthly", type=float, dest="arpa_monthly")
+    p.add_argument("--arpu-monthly", type=float, dest="arpu_monthly")
+    p.add_argument("--gross-margin", type=float, dest="gross_margin")
+    p.add_argument("--monthly-churn", type=float, dest="monthly_churn")
+    p.add_argument("--invites-per-user", type=float, dest="invites_per_user")
+    p.add_argument("--invite-conversion-rate", type=float, dest="invite_conversion_rate")
     args = p.parse_args(argv)
 
-    with open(args.inputs, encoding="utf-8") as fh:
-        inputs = json.load(fh)
+    if args.inputs:
+        with open(args.inputs, encoding="utf-8") as fh:
+            inputs = json.load(fh)
+    else:
+        keys = ("spend", "new_customers", "arpa_monthly", "arpu_monthly",
+                "gross_margin", "monthly_churn", "invites_per_user", "invite_conversion_rate")
+        inputs = {k: getattr(args, k) for k in keys}
+        if all(v is None for v in inputs.values()):
+            p.error("provide --inputs FILE or at least one metric flag (e.g. --spend 1000 --new-customers 50)")
 
     bm = None
     if args.benchmarks and os.path.exists(args.benchmarks):

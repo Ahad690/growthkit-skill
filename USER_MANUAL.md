@@ -1,267 +1,291 @@
-# GrowthKit — User Manual
+# User Manual — GrowthKit
 
-A practical, end-to-end guide to using **GrowthKit**, the honest short-form-video
-marketing skill for SaaS and apps. For the *why* behind the design, see
-[`README.md`](README.md); for the data/privacy contract, see
-[`DATA_POLICY.md`](DATA_POLICY.md).
-
----
-
-## 1. What GrowthKit is (and the one rule that defines it)
-
-GrowthKit plans and writes a TikTok-first (Reels/Shorts where TikTok is weak or
-banned) growth motion for a SaaS/app. The single rule that governs everything:
-
-> **The model never invents a market/performance number.** Views, completion
-> rate, followers, installs, CAC, LTV, hashtag volume — these come ONLY from the
-> deterministic scripts run on *your own real exports*, or from a clearly-labeled
-> external fetch. Missing data ⇒ GrowthKit asks for the export or says "no data."
-> It never fabricates.
-
-Every number you see carries an **envelope**:
-`{value, low, high, confidence∈{LOW,MEDIUM,HIGH}, method, sources, flags}`.
+A step-by-step guide to using the skill, from install to a finished growth plan.
+For the project overview and the honesty model, see [`README.md`](README.md).
+For exactly what data is handled, see [`DATA_POLICY.md`](DATA_POLICY.md).
 
 ---
 
-## 2. Requirements & install
+## 1. What this skill does (in one minute)
 
-- **Python 3.10+.** The core scripts use only the standard library — no installs
-  needed to analyze your data, compute metrics, or run the compliance gate.
-- Optional extras (only for optional features):
-  ```bash
-  pip install -r requirements.txt        # requests (live trends), huggingface_hub (federation)
-  pip install "playwright>=1.40" && playwright install chromium   # only for live-trend header acquisition
-  ```
+You describe your SaaS/app in Claude Code. The skill picks the right playbook
+(B2C-install vs B2B-leadgen, TikTok-native vs Reels/Shorts where TikTok is weak
+or banned), writes positioning and Hook→Value→CTA scripts, plans a 2–4 week
+60/30/10 content calendar, measures your funnel and SaaS metrics from *your*
+numbers, analyzes your own TikTok Studio export, and hands you a finished
+**`growth-plan.html`** — a single page with your positioning, calendar (with
+copy-buttons per script), metrics with provenance, and a compliance checklist.
 
-Clone and use as a Claude Code skill:
-
-```bash
-git clone https://github.com/Ahad690/growthkit-skill.git
-```
-
-The skill lives in `skills/growthkit/`. Invoke it in Claude Code with
-`/growthkit` or just ask for a marketing plan, video scripts, a content calendar,
-growth metrics, or attribution analysis. Scripts can also be run directly from a
-terminal (see §5).
+**The rule that makes it different:** every market/performance number (views,
+completion rate, installs, CAC, LTV, hashtag volume) is computed by a Python
+script from data you can see. The model never guesses one. If the data isn't
+there, it asks you or says "no data."
 
 ---
 
-## 3. Quick start (5 minutes)
+## 2. Requirements
 
-1. **Describe your product** to GrowthKit: one-liner, B2C or B2B, primary
-   market/country, stage, budget. It picks the right playbook variant and tells
-   you which and why.
-2. **Get a plan:** positioning, content pillars (60/30/10), and a 2–4 week
-   Hook→Value→CTA script calendar. Promotional scripts come with the mandatory
-   disclosure block already attached.
-3. **Bring real data when you have it:** export your TikTok Studio CSV and ask
-   GrowthKit to analyze it (see §5.1). Now your "what's working" is measured, not
-   guessed.
+- **Claude Code** (the skill runs there).
+- **Python 3.10+** on your PATH (the scripts run via `python3`).
+- *Optional:* `requests` — only for live Creative Center trends (Path C below).
+- *Optional:* `huggingface_hub` — only if you contribute data back or pull
+  community benchmarks.
+- *Optional:* `playwright` — only for live-trend signature headers.
+
+Install the optional packages only if you'll fetch trends or federate:
+
+```
+pip install -r requirements.txt
+```
+
+The core — planning, scripts, calendar, CSV analysis, metrics, attribution,
+compliance — needs **none** of them and works fully offline.
 
 ---
 
-## 4. The intake questions (and why they branch the playbook)
+## 3. Install
 
-GrowthKit asks once, in one message:
+```
+/plugin marketplace add Ahad690/growthkit-skill
+/plugin install growthkit@growthkit-marketplace
+```
 
-| Question | Why it matters |
-|----------|----------------|
-| Product one-liner | Positioning + script substance |
-| **B2C or B2B** | B2C = install-chasing; B2B = awareness/leads, longer cycle |
-| **Primary market/country** | If `weak`/`banned` in `markets.json` (e.g., India, Pakistan) → Reels/Shorts-native playbook |
-| Audience on TikTok? | Confirms platform choice |
-| Stage (pre-PMF / growth) | Tunes priorities |
-| Budget (default: bootstrapped) | Organic-first vs paid |
-| Existing handles/links (optional) | **Stays local** — never uploaded |
+Verify the package locally any time with:
 
-Chosen variant = **(B2C-install | B2B-leadgen) × (TikTok-native | Reels/Shorts-native)**.
+```
+claude plugin validate .
+```
 
 ---
 
-## 5. The scripts (run directly or via the skill)
+## 4. Your first run
 
-All scripts print JSON with the provenance envelope. Paths below are relative to
-the repo root; the skill calls them as `python3 ${CLAUDE_SKILL_DIR}/scripts/<name>.py`.
+1. In Claude Code, just describe what you're building, e.g.:
 
-### 5.1 Analyze your TikTok Studio CSV — ground truth
-Export from **TikTok Studio → Analytics → Content** (columns like `video_id,
-post_date, views, video_duration_sec, avg_watch_time_sec, full_video_watch_rate,
-shares, saves, profile_visits, …`; the analyzer tolerates name variants and
-missing columns).
+   > help me grow my study app on TikTok
 
-```bash
-python skills/growthkit/scripts/analyze_studio_csv.py path/to/export.csv --floor 0.20 --top-n 10
-```
-Returns per-post completion/watch-time/share/save/profile-visit rates, ranked
-winners, and `hook_failure` flags for posts below the 3-second-view floor. All
-`confidence: HIGH`, `sources: ["owned_csv"]`. **Your raw CSV never leaves your
-machine.**
+   (Or run it explicitly: `/growthkit`.)
 
-### 5.2 SaaS metrics calculator
-Create an `inputs.json`:
-```json
-{ "spend": 1000, "new_customers": 50, "arpa_monthly": 100, "arpu_monthly": 100,
-  "gross_margin": 0.8, "monthly_churn": 0.02,
-  "invites_per_user": 5, "invite_conversion_rate": 0.2 }
-```
-```bash
-python skills/growthkit/scripts/saas_metrics.py --inputs inputs.json \
-  --benchmarks skills/growthkit/references/config.json
-```
-Returns CAC, LTV, LTV:CAC, CAC payback, annual churn, K-factor, with threshold
-flags (`ltv_cac_below_floor`, `payback_too_long`, `churn_above_warn`).
+2. The skill asks **one** set of questions. Answer in a single message:
+   - your product one-liner
+   - **B2C or B2B**
+   - your primary market/country
+   - whether your audience is on TikTok
+   - stage (pre-PMF / growth) and budget (bootstrapped is the default)
+   - existing handles/links, or "none" (optional — stays local)
 
-### 5.3 Funnel diagnostic (AARRR/RARRA)
-`stages.json` (ordered):
-```json
-{ "visitors": 10000, "signups": 1200, "activated": 400, "paid": 60, "retained_d30": 30 }
-```
-```bash
-python skills/growthkit/scripts/funnel_diagnose.py --stages stages.json
-```
-Returns step conversions, drop-offs, and the biggest bottleneck — deterministic.
+3. It states which playbook variant it chose and **why** — e.g. *"You're in
+   Pakistan, where TikTok is banned per `markets.json`, so this is the
+   Reels/Shorts-native plan; TikTok trends are used only as a leading
+   indicator."*
 
-### 5.4 Organic-attribution estimate (banded, never precise)
-`signals.json` — all your own owned counts:
-```json
-{ "landing_utm_installs": 100, "promo_code_redemptions": 50,
-  "brand_search_lift_installs": 50, "mmp_organic_bucket": 400,
-  "survey_tiktok_share": 0.3, "total_installs": 1000 }
-```
-```bash
-python skills/growthkit/scripts/attribution_estimate.py --signals signals.json
-```
-Returns a **band** (`value`, `low`, `high`) + confidence + the
-"deferred deep links ≠ reliable attribution" caveat. No signals ⇒ `confidence:
-NONE`, `flags: [no_attribution_data]` (never a fabricated number).
+4. It writes your positioning (Dunford worksheet → one-liner + JTBD), proposes
+   content pillars, and drafts the script calendar. Every **promotional** script
+   arrives with the mandatory disclosure block already attached — that's the
+   compliance gate, not a suggestion.
 
-### 5.5 Compliance screen (hard gate)
-```bash
-python skills/growthkit/scripts/compliance.py --account-type business --category crypto --sound-source trending
-```
-Screens music (business → CML/original only), restricted categories, and (in the
-skill flow) disclosure + repurposing. Used automatically before any promotional
-output is shown.
+5. Give it numbers when you have them, in plain conversation:
+   - *"I spent $1,000 and got 50 customers, ARPA $100, margin 80%, churn 2%"* →
+     it runs the metrics script and reports CAC/LTV/payback **with flags**.
+   - *"10,000 visitors, 1,200 signups, 60 paid"* → it runs the funnel script and
+     names your biggest bottleneck.
+   - Drop your **TikTok Studio CSV** → it ranks winners, flags hook failures,
+     and reports per-post metrics (`confidence: HIGH`, `sources: owned_csv`).
 
-### 5.6 Live trends (OPTIONAL, degrades gracefully)
-```bash
-python skills/growthkit/scripts/fetch_trends.py --country US           # prints a ToS notice to stderr
-python skills/growthkit/scripts/fetch_trends.py --country US --acquire-headers   # tries Playwright
-```
-With no signature headers/proxy it returns a clearly-labeled `fetch_failed`
-fallback — it never crashes and never fabricates a trend. **Every other feature
-works with the network disabled.**
+6. It assembles everything into **`growth-plan.html`** and tells you where it
+   wrote it. Open it in a browser: positioning, the pillar split, week-by-week
+   post cards with copy buttons, a metrics table with confidence/method/sources
+   per row, and the compliance checklist.
+
+That's the whole loop — no input files, no keys, no setup.
 
 ---
 
-## 6. Compliance gates (what GrowthKit will refuse to do)
+## 5. The three data layers
 
-1. **Music** — on a **business account**, only Commercial Music Library or
-   original/owned audio. It will not tell you to reuse a trending commercial sound.
-2. **Disclosure** — any promotional post gets the in-app Commercial Content
-   Disclosure toggle + first-line + spoken + on-screen disclosure. A bio
-   disclosure does not cover a post; `#ad` alone is insufficient.
-3. **Restricted categories** — crypto, financial, health/supplements, alcohol,
-   etc. are flagged/adjusted before a campaign is generated.
-4. **Repurposing** — always export a clean master; never download the watermarked
-   TikTok and re-upload.
+### Layer A — Your own exports (ground truth, default)
+Your TikTok Studio / Business Suite CSV and your own funnel/MMP numbers. This is
+the reliable layer: everything computed from it is `confidence: HIGH` with
+`sources: ["owned_csv"]` or `["user_input"]`. To export: TikTok Studio →
+Analytics → Content → Download data. The analyzer tolerates column-name variants
+and missing columns. **Raw exports never leave your machine.**
+
+### Layer B — Bundled benchmarks (labeled defaults)
+`benchmarks.json` ships source-tagged default ranges (PLG conversion, SaaS
+thresholds, completion tiers). Each is labeled `self_reported`, `measured`, or
+`heuristic` — the skill cites them with those labels and never upgrades a
+heuristic to a fact. Community data improves these over time (§8).
+
+### Layer C — Live Creative Center trends (opt-in, best-effort)
+Ask for live trending hashtags and the skill runs the fetcher. It needs
+signature headers (Playwright) and works best from a residential IP; it surfaces
+a ToS notice on first use. **On any failure it returns a labeled
+`fetch_failed` fallback — never a fabricated trend — and the rest of the skill
+is unaffected.** Keyword Insights is explicitly unsupported (no reliable free
+path); the skill says so if asked.
 
 ---
 
-## 7. Known limitations (by design, not bugs)
+## 6. Reading the output
 
-1. **Keyword Insights is unsupported** — no reliable free path; GrowthKit says so.
-2. **Organic attribution is approximate** — there's no pixel on organic posts;
-   you get a band, never a precise count.
-3. **Case-study growth numbers are self/agency-reported** — taught as patterns,
-   labeled `self_reported`, never presented as reproducible benchmarks.
+Every number in the chat and in `growth-plan.html` carries an envelope:
+
+| Field | What it means |
+|---|---|
+| **value / low / high** | The number — always a **band** for estimates (attribution is never a single count). |
+| **confidence** | `HIGH` only for directly-observed owned facts; estimates cap at `MEDIUM`; thin data is `LOW`; missing data is `NONE`. |
+| **method** | How it was computed (`owned_studio_csv`, `deterministic_formula`, `triangulated_estimate`, …). |
+| **sources** | Where the inputs came from (`owned_csv`, `user_input`, `creative_center`, `community_dataset`). |
+| **flags** | e.g. `hook_failure`, `ltv_cac_below_floor`, `organic_attribution_is_approximate` — read these; they tell you how much to trust a number. |
+
+Anything labeled `heuristic` (e.g. "~70% completion ≈ viral") is creator lore
+used only to frame guidance — never presented as a measured fact.
 
 ---
 
-## 8. Federation (opt-in, OFF by default)
+## 7. Running the scripts directly (optional)
 
-GrowthKit can contribute **public, anonymized** trend/benchmark rows to a shared
-Hugging Face dataset that improves everyone's default benchmarks. Your owned
-analytics, handles, and any identifying field **never leave your machine**.
+You don't need to — the skill orchestrates them — but they're plain CLIs:
 
-### 8.1 Preview what would be shared (safe; no upload)
-```bash
-python skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
 ```
-`assert_public_only` aborts the entire contribution if any banned field (handle,
-`video_id`, raw CSV, install-level data, etc.) is present.
+# Analyze your TikTok Studio export (ground truth)
+python3 skills/growthkit/scripts/analyze_studio_csv.py export.csv --floor 0.20
 
-### 8.2 Actually contribute (requires BOTH a token AND dropping --dry-run)
-```bash
-export HF_TOKEN=hf_...      # PowerShell: $env:HF_TOKEN = "hf_..."
-python skills/growthkit/scripts/federation/contribute.py --rows rows.json
+# SaaS metrics from your raw numbers
+python3 skills/growthkit/scripts/saas_metrics.py --spend 1000 --new-customers 50 \
+    --arpa-monthly 100 --arpu-monthly 100 --gross-margin 0.8 --monthly-churn 0.02
+
+# Funnel bottleneck (flag order = funnel order)
+python3 skills/growthkit/scripts/funnel_diagnose.py \
+    --stage visitors=10000 --stage signups=1200 --stage paid=60
+
+# Banded organic-attribution estimate (never a precise count)
+python3 skills/growthkit/scripts/attribution_estimate.py \
+    --landing-utm-installs 100 --promo-code-redemptions 50 \
+    --mmp-organic-bucket 400 --survey-tiktok-share 0.3 --total-installs 1000
+
+# Compliance screen
+python3 skills/growthkit/scripts/compliance.py --account-type business \
+    --category crypto --sound-source trending
+
+# Live trends (optional; labeled fallback on failure)
+python3 skills/growthkit/scripts/fetch_trends.py --country US
+
+# Render a plan you already have
+python3 skills/growthkit/scripts/build_plan.py growth-plan.json --out growth-plan.html
 ```
-Each contribution becomes one new content-addressed file
-`contributions/<author>-<hash>.json` opened as a **pull request** — append-only,
-never rewriting existing data. There is no background upload.
 
-### 8.3 Pull community data back into your local benchmarks
-```bash
-python skills/growthkit/scripts/federation/refresh_dataset.py --dry-run   # preview
-python skills/growthkit/scripts/federation/refresh_dataset.py             # merge
+Every script prints JSON; add `--help` to any of them.
+
+---
+
+## 8. Contributing data back (opt-in)
+
+The skill can share **public, anonymized** trend/benchmark rows to a community
+Hugging Face dataset that improves everyone's defaults.
+
+**Contribution is OFF by default. Nothing ever leaves your machine unless you
+deliberately run the command without `--dry-run`.** Two independent on-switches
+must both be flipped: dropping `--dry-run` **and** having `HF_TOKEN` set.
+
+**Step 1 — preview (safe; shares nothing):**
+
 ```
-Validates every row (schema + range + enum + banned-field), refuses corrupt-heavy
-files, no-ops below the new-row threshold, and rebuilds community benchmarks with
-coverage-aware confidence (`LOW` until a segment has enough rows). Reading the
-public dataset needs no token.
+python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
+```
 
-### 8.4 Maintainers: the auto-merge bot
-Clean PRs are merged unattended by
-`skills/growthkit/scripts/federation/automerge.py` (daily GitHub Actions cron),
-but only if they're purely additive and clear the guard stack (additive-only →
-size cap → schema/PII/range → anti-abuse); anything else is held for a human. It
-needs a **fine-grained** HF token (write + discussions, scoped to just
-`Ahad690/growthkit-trends`) stored as the `HF_TOKEN` repo secret:
+This prints the exact cleaned rows that *would* be shared. `assert_public_only`
+aborts the whole contribution if any identifying/owned field (handle, `video_id`,
+raw CSV, per-post metrics, install-level data…) is present.
+
+**Step 2 — actually share:**
+
+```
+export HF_TOKEN=your_hf_token               # Windows: setx HF_TOKEN "..."
+python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json
+```
+
+Your contribution lands as one new content-addressed file
+(`contributions/<you>-<hash>.json`) opened as a **pull request** — append-only,
+never rewriting existing data. A guarded bot auto-merges clean PRs and holds
+anything suspicious for a human. Full policy: [`DATA_POLICY.md`](DATA_POLICY.md).
+
+**Pulling community data back down:**
+
+```
+python3 skills/growthkit/scripts/federation/refresh_dataset.py --dry-run   # preview
+python3 skills/growthkit/scripts/federation/refresh_dataset.py             # merge
+```
+
+It refuses corrupt-heavy files, no-ops below a minimum of clean new rows, and
+labels community benchmarks with coverage-aware confidence.
+
+**Maintainers** — store the bot's fine-grained HF token (write + discussions,
+scoped to only the dataset) as a repo secret:
 
 ```powershell
-# PowerShell one-liner (prompts without echoing the token):
-gh secret set HF_TOKEN -R Ahad690/growthkit-skill # `-b` flag allows to see your token in the powershell UI
+# gh prompts for the value with hidden input (avoid -b, which echoes the token):
+gh secret set HF_TOKEN -R Ahad690/growthkit-skill
 ```
-
-```bash
-# Preview the bot's decisions without merging:
-python skills/growthkit/scripts/federation/automerge.py --dry-run
-```
-
-> **Honest boundary:** the guards prove a row is well-formed, PII-free, in-range,
-> and statistically unremarkable — not that the numbers are *authentic*. Because a
-> Hugging Face repo is a git repo, any merge is one corrective commit from
-> reverted, and consumers can pin a known-good revision.
 
 ---
 
-## 9. Configuration
+## 9. Tuning
 
-All tunable constants live in
-[`skills/growthkit/references/config.json`](skills/growthkit/references/config.json):
-pillar split, hashtags-per-post, the 3-sec-view floor, SaaS benchmark thresholds,
-fetch settings, federation thresholds, and `ui.contribution_reminder` (the
-opt-out toggle for the contribution nudge). Same inputs + same config + same
-dataset snapshot ⇒ reproducible outputs.
+All knobs live in `skills/growthkit/references/config.json` — nothing is hidden
+in the model. Common edits:
+
+- **`content.pillar_split`** — change the 60/30/10 mix.
+- **`analyzer.three_sec_view_floor`** — where `hook_failure` fires (default 0.20).
+- **`saas_benchmarks.*`** — the LTV:CAC floor, payback ceiling, churn warning.
+- **`fetch.*`** — default country, period, cache TTL for live trends.
+- **`federation.*`** — dataset repo, refresh thresholds.
+- **`ui.contribution_reminder`** — set `false` to remove the "help grow the
+  dataset" banner from the generated `growth-plan.html`.
+
+Re-run after editing — output changes deterministically.
 
 ---
 
 ## 10. Troubleshooting
 
-| Symptom | Cause / fix |
-|---------|-------------|
-| `fetch_failed` in trend results | Expected without signature headers/proxy. Use owned-CSV analysis + bundled benchmarks; live trends are optional. |
-| Attribution returns `NONE` | You supplied no usable signals — add UTM/promo/MMP/survey numbers. It won't guess. |
-| `refusing to upload identifying/owned fields` | A banned field was in your contribution rows. Strip to the shareable schema (§8). This is the guard working. |
-| `missing_columns:` flag from the analyzer | Your CSV lacked some columns; GrowthKit computed what it could and flagged the rest. |
-| Benchmarks labeled `LOW` confidence | That (industry, country) segment lacks community data yet. Contribute to improve coverage. |
-| `python3: command not found` (Windows) | Use `python` instead of `python3`. |
+| Symptom | Fix |
+|---|---|
+| **Skill asks for an export instead of giving a number** | By design. It won't guess your metrics — drop the TikTok Studio CSV or state the number. |
+| **Attribution shows a wide band / LOW confidence** | Your triangulation methods disagree. Add more signals (UTM links, promo codes, an MMP export, a post-install survey). It will never collapse the band into a fake precise count. |
+| **Trends return `fetch_failed`** | Expected without signature headers / from a datacenter IP. The plan still works fully on owned data; try `--acquire-headers` with Playwright installed, or skip trends. |
+| **A promo script "has extra text about disclosure"** | That's the mandatory disclosure block (compliance gate). It stays. |
+| **Business account + trending sound refused** | Also by design — business accounts must use Commercial Music Library or original audio. |
+| **Benchmarks say LOW confidence** | That (industry, country) segment has little community data yet. Contribute (§8) to improve it. |
+| **`refusing to upload identifying/owned fields`** | The PII guard caught a banned field in your contribution. Strip to the shareable schema — this is the guard working. |
+| **`python3: command not found` (Windows)** | Use `python` instead of `python3`. |
 
 ---
 
-## 11. License
+## 11. FAQ
+
+**Does it post to TikTok for me?** No. No auto-posting, no scheduling, no
+engagement automation — it produces copy-paste-ready scripts and a plan.
+
+**Will the numbers change between runs?** Not for the same inputs — every metric
+is deterministic. They change only when your data changes.
+
+**Can it tell me exactly how many installs TikTok drove?** No, and it won't
+pretend to — organic attribution has no pixel. You get a triangulated band with
+a confidence label and the deferred-deep-link caveat.
+
+**Are the case-study numbers real?** They're self/agency-reported and labeled as
+such; the skill teaches the patterns, not the numbers.
+
+**Is fetching Creative Center trends allowed?** That's on you to determine —
+it's opt-in, surfaced with a ToS notice, and the skill never requires it. See
+[`DATA_POLICY.md`](DATA_POLICY.md).
+
+---
+
+## 12. License
 
 - **Code:** MIT ([`LICENSE`](LICENSE))
 - **Data & docs:** CC-BY-4.0 ([`LICENSE-DATA`](LICENSE-DATA))
 
-Run the tests with `python -m pytest tests/ -q` (61 tests).
+Run the tests with `python -m pytest tests/ -q` (72 tests).

@@ -11,7 +11,11 @@ label. It NEVER returns a single precise number, and it surfaces the
 HONESTY: when no usable signal is supplied, returns confidence="NONE" and
 flag "no_attribution_data" rather than inventing a value.
 
-Usage:
+Usage (direct flags — no input file needed):
+    python3 attribution_estimate.py --landing-utm-installs 100 \
+        --promo-code-redemptions 50 --mmp-organic-bucket 400 \
+        --survey-tiktok-share 0.3 --total-installs 1000
+or from a JSON file:
     python3 attribution_estimate.py --signals signals.json
 """
 from __future__ import annotations
@@ -92,10 +96,24 @@ def estimate_organic_installs(signals: dict[str, Any]) -> dict[str, Any]:
 
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Banded organic-install attribution estimator.")
-    p.add_argument("--signals", required=True, help="Path to a JSON file of owned attribution signals")
+    p.add_argument("--signals", help="Path to a JSON file of owned attribution signals (alternative to the flags below)")
+    # Direct flags — the skill passes the founder's real counts from the conversation.
+    p.add_argument("--landing-utm-installs", type=float, dest="landing_utm_installs")
+    p.add_argument("--promo-code-redemptions", type=float, dest="promo_code_redemptions")
+    p.add_argument("--mmp-organic-bucket", type=float, dest="mmp_organic_bucket")
+    p.add_argument("--brand-search-lift-installs", type=float, dest="brand_search_lift_installs")
+    p.add_argument("--survey-tiktok-share", type=float, dest="survey_tiktok_share")
+    p.add_argument("--total-installs", type=float, dest="total_installs")
     args = p.parse_args(argv)
-    with open(args.signals, encoding="utf-8") as fh:
-        signals = json.load(fh)
+
+    if args.signals:
+        with open(args.signals, encoding="utf-8") as fh:
+            signals = json.load(fh)
+    else:
+        keys = ("landing_utm_installs", "promo_code_redemptions", "mmp_organic_bucket",
+                "brand_search_lift_installs", "survey_tiktok_share", "total_installs")
+        signals = {k: getattr(args, k) for k in keys if getattr(args, k) is not None}
+
     print(json.dumps(estimate_organic_installs(signals), indent=2, ensure_ascii=False))
     return 0
 
