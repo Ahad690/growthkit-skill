@@ -169,6 +169,22 @@ examples/sample_studio_export.csv
 python -m pytest tests/ -q
 ```
 
+## Related projects (same honesty architecture)
+
+GrowthKit is part of a family of **local-first, no-fabricated-numbers Claude
+Code skills** — each with deterministic scripts, provenance envelopes, an HTML
+deliverable, append-only local data, and an opt-in federated dataset:
+
+- [**AppScope** (open-app-intel)](https://github.com/Ahad690/open-app-intel) —
+  honest app market intelligence: local store-data capture and
+  confidence-banded download/revenue estimates. If you run both, AppScope's
+  download estimate can serve as one more owned signal in GrowthKit's
+  triangulated attribution band.
+- [**fiverr-gig-optimizer**](https://github.com/Ahad690/fiverr-gig-optimizer) —
+  research-backed Fiverr gig catalogs with no guessed market numbers; also home
+  to the reusable [HF auto-merge community-dataset pattern](https://github.com/Ahad690/fiverr-gig-optimizer/tree/main/patterns/hf-community-dataset)
+  these projects share.
+
 ## License
 
 - **Code:** MIT ([LICENSE](LICENSE))
