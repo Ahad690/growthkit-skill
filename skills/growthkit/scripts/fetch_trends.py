@@ -150,9 +150,13 @@ def acquire_headers() -> Optional[dict[str, str]]:
         return None
 
 
-def _load_cache() -> dict[str, Any]:
+def _cache_path() -> str:
     here = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(here, "..", "data", "trends.cache.json")
+    return os.path.join(here, "..", "data", "trends.cache.json")
+
+
+def _load_cache() -> dict[str, Any]:
+    path = _cache_path()
     if os.path.exists(path):
         try:
             with open(path, encoding="utf-8") as fh:
@@ -160,6 +164,54 @@ def _load_cache() -> dict[str, Any]:
         except Exception:
             return {}
     return {}
+
+
+def _save_cache(cache: dict[str, Any], result: dict[str, Any]) -> None:
+    """Persist a successful live fetch so future failures have a real fallback.
+    Merges into the existing cache (never truncates other keys); atomic write."""
+    if result.get("method") != "creative_center_live" or not result.get("items"):
+        return
+    key = f"{result.get('country')}:{result.get('industry_id', '')}"
+    cache = dict(cache or {})
+    cache[key] = result["items"]
+    cache[f"{key}:fetched_at"] = result.get("fetched_at")
+    path = _cache_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(cache, fh, ensure_ascii=False, indent=2)
+        fh.write("\n")
+    os.replace(tmp, path)
+
+
+def observations_from_result(result: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert a successful live fetch into shareable observation rows
+    (§8.3 schema) for the append-only local store. The hashtag is encoded in
+    metric_name since the shareable schema has no free-form tag field."""
+    if result.get("method") != "creative_center_live":
+        return []  # never stage fallback/cached data as a fresh observation
+    captured_on = (result.get("fetched_at") or "")[:10]
+    industry = result.get("industry_id") or "all"
+    rows: list[dict[str, Any]] = []
+    for item in result.get("items", []):
+        tag = item.get("hashtag")
+        if not tag:
+            continue
+        for metric in ("publish_cnt", "video_views"):
+            value = item.get(metric)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                rows.append({
+                    "platform": "tiktok",
+                    "data_type": "hashtag_trend",
+                    "industry": industry,
+                    "country": result.get("country"),
+                    "metric_name": f"{metric}:{tag}",
+                    "metric_value": value,
+                    "period_days": result.get("period_days", 7),
+                    "captured_on": captured_on,
+                    "source": "creative_center",
+                })
+    return rows
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -171,6 +223,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--acquire-headers", action="store_true",
                    help="Attempt Playwright header acquisition (optional dependency)")
     p.add_argument("--no-warning", action="store_true", help="Suppress the ToS warning line")
+    p.add_argument("--no-save", action="store_true",
+                   help="Skip persisting a successful fetch to the local cache/store")
     args = p.parse_args(argv)
 
     if not args.no_warning:
@@ -182,6 +236,16 @@ def main(argv: Optional[list[str]] = None) -> int:
         country=args.country, industry_id=args.industry_id,
         period=args.period, limit=args.limit, headers=headers, cache=cache,
     )
+    result["period_days"] = args.period
+
+    # Persist every successful run (append-only; nothing is ever destroyed):
+    # the cache powers future fallbacks, the store stages shareable rows the
+    # user may contribute to the community dataset later.
+    if not args.no_save and result.get("method") == "creative_center_live":
+        _save_cache(cache, result)
+        import local_store
+        result["staged"] = local_store.append(observations_from_result(result))
+
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0  # Always 0: a labeled fallback is a successful, honest outcome.
 

@@ -89,7 +89,10 @@ Combine with ICP to pick the playbook: (B2C-install | B2B-leadgen) × (TikTok-na
 ### Step 4 — Real trend data (OPTIONAL, owned-first)
 - **CSV analyzer (FR9, ground truth):** when the founder shares a TikTok Studio /
   Business Suite export, run
-  `python3 ${CLAUDE_SKILL_DIR}/scripts/analyze_studio_csv.py <path>`.
+  `python3 ${CLAUDE_SKILL_DIR}/scripts/analyze_studio_csv.py <path>
+  --industry <industry> --country <country>` (pass both from intake so the run
+  stages aggregated median-only benchmark rows in the append-only local store
+  for later opt-in contribution; per-post data and the raw CSV are never staged).
   Report ranked winners, flagged hook failures, and per-post metrics — all
   `confidence: HIGH`, `sources: ["owned_csv"]`. This is the reliable layer.
 - **Creative Center fetcher (FR10, optional):** only if the user wants live
@@ -160,10 +163,14 @@ the deliverable was written (`growth-plan.html`).
    recommend owned-CSV + bundled benchmarks instead.
 
 ## Federation (opt-in, OFF by default)
-`scripts/federation/contribute.py --dry-run` previews the ONLY data that may
-leave the machine: public, anonymized trend/benchmark rows. `assert_public_only`
-aborts on any identifying/owned field. Each contribution is written as one
-new content-addressed file `contributions/<author>-<hash>.json` (append-only;
+Every fetch/analysis run automatically STAGES its shareable observations in the
+append-only local store (`data/observations.local.json` — rows are only ever
+added, never deleted; contribution does not clear it). When the user wants to
+contribute, run `scripts/federation/contribute.py --dry-run` — it reads the
+store by default and previews the ONLY data that may leave the machine: public,
+anonymized trend/benchmark rows. `assert_public_only` aborts on any
+identifying/owned field. Each contribution is written as one new
+content-addressed file `contributions/<author>-<hash>.json` (append-only;
 never rewrites existing data) and opened as a PR; a guarded auto-merge bot
 (`automerge.py`, on a GitHub Actions cron) merges only purely-additive PRs that
 clear the schema/PII/range/anti-abuse stack and holds the rest for a human.

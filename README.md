@@ -110,9 +110,14 @@ GrowthKit can contribute **public, anonymized** trend/benchmark rows to a shared
 analytics, handles, and any identifying field **never leave your machine** — the
 `assert_public_only` guard refuses the whole contribution on any banned field.
 
+Every run **stages** its shareable observations in a local, append-only store
+(`data/observations.local.json`) — successful trend fetches and aggregated
+(median-only) CSV benchmarks accumulate there, nothing is ever deleted — so
+contributing later is one command:
+
 ```bash
-# Preview exactly what would be shared (no upload):
-python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
+# Preview exactly what's staged / would be shared (no upload):
+python3 skills/growthkit/scripts/federation/contribute.py --dry-run
 
 # Pull community data and refresh default benchmarks (preview):
 python3 skills/growthkit/scripts/federation/refresh_dataset.py --dry-run

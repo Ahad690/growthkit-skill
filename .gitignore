@@ -8,8 +8,12 @@ __pycache__/
 venv/
 env/
 
-# Local cache (may grow large) — never commit owned/fetched cache
+# Local cache + append-only observation store — never committed; stays on
+# the user's machine until they explicitly contribute
 skills/growthkit/data/trends.cache.json
+skills/growthkit/data/observations.local.json
+skills/growthkit/data/*.corrupt-*.json
+skills/growthkit/data/*.tmp
 
 # Owned founder data — NEVER commit real exports
 *.local.csv

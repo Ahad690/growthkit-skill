@@ -22,7 +22,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import statistics
 import sys
+import time
 from typing import Any, Optional
 
 # Tolerant column-name resolution: canonical -> accepted variants (lowercased).
@@ -168,13 +170,56 @@ def analyze(path: str, three_sec_floor: float = 0.20, top_n: int = 10) -> dict[s
     }
 
 
+def aggregate_benchmarks(result: dict[str, Any], industry: str, country: str,
+                         captured_on: Optional[str] = None,
+                         min_posts: int = 3) -> list[dict[str, Any]]:
+    """Turn an analysis into AGGREGATED perf_benchmark rows (§8.3 schema) for
+    the append-only local store. Medians across posts only — never per-post,
+    never a video_id/handle. Requires >= min_posts posts with data so a single
+    post can't masquerade as a benchmark. Raw CSV data itself never leaves."""
+    posts = result.get("posts") or []
+    captured_on = captured_on or time.strftime("%Y-%m-%d")
+    rows: list[dict[str, Any]] = []
+    for metric in ("completion_rate", "watch_time_pct", "share_rate", "save_rate"):
+        values = [p[metric] for p in posts
+                  if isinstance(p.get(metric), (int, float)) and not isinstance(p.get(metric), bool)]
+        if len(values) >= min_posts:
+            rows.append({
+                "platform": "tiktok",
+                "data_type": "perf_benchmark",
+                "industry": industry,
+                "country": country,
+                "metric_name": f"{metric}_median",
+                "metric_value": round(statistics.median(values), 4),
+                "period_days": 7,
+                "captured_on": captured_on,
+                "source": "aggregated_owned",
+            })
+    return rows
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Analyze a TikTok Studio CSV export (ground-truth layer).")
     p.add_argument("csv_path", help="Path to the TikTok Studio / Business Suite content export CSV")
     p.add_argument("--floor", type=float, default=0.20, help="3-second-view (hook-failure) floor, 0-1")
     p.add_argument("--top-n", type=int, default=10, help="Number of winners to return by completion rate")
+    p.add_argument("--industry", help="Industry label — with --country, stages aggregated "
+                                      "(median-only) benchmark rows in the local store")
+    p.add_argument("--country", help="Country code — see --industry")
+    p.add_argument("--no-save", action="store_true", help="Skip staging aggregated benchmarks")
     args = p.parse_args(argv)
     result = analyze(args.csv_path, three_sec_floor=args.floor, top_n=args.top_n)
+
+    # Stage AGGREGATED medians (only) in the append-only local store so the
+    # user can contribute them later. Per-post rows and the raw CSV stay local
+    # and are never staged.
+    if (not args.no_save and not result.get("error")
+            and args.industry and args.country):
+        import local_store
+        rows = aggregate_benchmarks(result, args.industry, args.country)
+        if rows:
+            result["staged"] = local_store.append(rows)
+
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return 0 if not result.get("error") else 1
 

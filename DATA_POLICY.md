@@ -41,14 +41,33 @@ For `perf_benchmark` rows, `metric_value` is **aggregated** (e.g., the median of
 a metric across your posts in a category) — never per-post, never tied to a
 `video_id`, handle, or account.
 
+## The local observation store (append-only; nothing is destroyed)
+Every run that produces a shareable observation stages it locally in
+`skills/growthkit/data/observations.local.json`:
+
+- a **successful** live trend fetch stages its hashtag observations (and also
+  updates the local fallback cache);
+- a CSV analysis run with `--industry`/`--country` stages **aggregated
+  medians only** (≥3 posts required) — never per-post rows, never the raw CSV.
+
+The store is **append-only**: rows are only ever added (deduplicated), there is
+no delete path, contribution does not clear it, writes are atomic, and if the
+file is ever unreadable it is renamed to a timestamped `.corrupt-*.json` backup
+rather than overwritten — no data is destroyed. Rows are stripped to the
+shareable schema *before* staging, so the store structurally cannot accumulate
+owned/identifying data; the `assert_public_only` guard still runs again at
+upload time. The store is git-ignored and stays on your machine until you
+explicitly contribute.
+
 ## Contribution is OFF by default (FR21)
 - Running `contribute.py` **without** `--dry-run` AND **with** an `HF_TOKEN`
   is the only way anything uploads. Missing either ⇒ nothing is sent.
 - There is **no background upload**. Every run prints exactly what it would
   share so you can inspect it first.
-- Preview safely any time:
+- Preview the staged store safely any time (it reads the store by default;
+  `--rows FILE` overrides):
   ```bash
-  python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
+  python3 skills/growthkit/scripts/federation/contribute.py --dry-run
   ```
 
 ## How contributions are stored — stack, don't rewrite

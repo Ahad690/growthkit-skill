@@ -20,8 +20,15 @@ For perf_benchmark rows, metric_value is AGGREGATED (e.g., median across the
 contributor's posts) — never per-post, never with a video_id/handle/account.
 
 Usage:
-    python3 contribute.py --rows rows.json --dry-run        # preview only (default-safe)
-    python3 contribute.py --rows rows.json                  # real PR (needs HF_TOKEN)
+    python3 contribute.py --dry-run          # preview the staged local store (default-safe)
+    python3 contribute.py                    # real PR from the store (needs HF_TOKEN)
+    python3 contribute.py --rows rows.json   # contribute an explicit file instead
+
+By default rows come from the append-only local observation store
+(data/observations.local.json) that every fetch/analysis run stages into —
+nothing there is ever deleted, including after a successful contribution
+(resubmission is idempotent: identical payloads hash to the same filename,
+and the pull side dedups rows).
 """
 from __future__ import annotations
 
@@ -202,13 +209,29 @@ def _load_config_dataset_id() -> str:
 
 def main(argv: Optional[list[str]] = None) -> int:
     p = argparse.ArgumentParser(description="Opt-in federation: contribute public anonymized rows.")
-    p.add_argument("--rows", required=True, help="Path to a JSON array of candidate rows")
+    p.add_argument("--rows", default=None,
+                   help="Path to a JSON array of candidate rows (default: the append-only "
+                        "local observation store staged by fetch/analysis runs)")
     p.add_argument("--dry-run", action="store_true", help="Preview only (default-safe; no upload)")
     p.add_argument("--dataset-id", default=None, help="Override the HF dataset id")
     args = p.parse_args(argv)
 
-    with open(args.rows, encoding="utf-8") as fh:
-        rows = json.load(fh)
+    if args.rows:
+        with open(args.rows, encoding="utf-8") as fh:
+            rows = json.load(fh)
+    else:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+        import local_store
+        rows = local_store.load()
+        if not rows:
+            print(json.dumps({
+                "status": "store_empty",
+                "note": "No staged observations yet. Runs of fetch_trends.py and "
+                        "analyze_studio_csv.py (--industry/--country) stage shareable "
+                        "rows automatically; or pass --rows FILE.",
+                "store": local_store.store_path(),
+            }, indent=2))
+            return 0
 
     dataset_id = args.dataset_id or _load_config_dataset_id()
     try:

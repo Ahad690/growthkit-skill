@@ -148,8 +148,10 @@ used only to frame guidance — never presented as a measured fact.
 You don't need to — the skill orchestrates them — but they're plain CLIs:
 
 ```
-# Analyze your TikTok Studio export (ground truth)
-python3 skills/growthkit/scripts/analyze_studio_csv.py export.csv --floor 0.20
+# Analyze your TikTok Studio export (ground truth); --industry/--country also
+# stage aggregated medians in the local store for later opt-in contribution
+python3 skills/growthkit/scripts/analyze_studio_csv.py export.csv --floor 0.20 \
+    --industry edtech --country US
 
 # SaaS metrics from your raw numbers
 python3 skills/growthkit/scripts/saas_metrics.py --spend 1000 --new-customers 50 \
@@ -184,25 +186,36 @@ Every script prints JSON; add `--help` to any of them.
 The skill can share **public, anonymized** trend/benchmark rows to a community
 Hugging Face dataset that improves everyone's defaults.
 
+**You never have to prepare anything.** Every run quietly stages its shareable
+observations in a local, append-only store
+(`skills/growthkit/data/observations.local.json`): successful trend fetches
+stage hashtag observations, and CSV analyses (when the skill knows your
+industry/country) stage **aggregated medians only** — never per-post rows,
+never your raw CSV. Rows are only ever added, contribution doesn't clear the
+store, and a corrupted file is backed up rather than overwritten — **no data
+is ever destroyed**. It accumulates locally until the day you decide to
+contribute.
+
 **Contribution is OFF by default. Nothing ever leaves your machine unless you
 deliberately run the command without `--dry-run`.** Two independent on-switches
 must both be flipped: dropping `--dry-run` **and** having `HF_TOKEN` set.
 
-**Step 1 — preview (safe; shares nothing):**
+**Step 1 — preview what's staged (safe; shares nothing):**
 
 ```
-python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json --dry-run
+python3 skills/growthkit/scripts/federation/contribute.py --dry-run
 ```
 
-This prints the exact cleaned rows that *would* be shared. `assert_public_only`
-aborts the whole contribution if any identifying/owned field (handle, `video_id`,
-raw CSV, per-post metrics, install-level data…) is present.
+This reads the store (or an explicit file via `--rows FILE`) and prints the
+exact cleaned rows that *would* be shared. `assert_public_only` aborts the
+whole contribution if any identifying/owned field (handle, `video_id`, raw CSV,
+per-post metrics, install-level data…) is present.
 
 **Step 2 — actually share:**
 
 ```
 export HF_TOKEN=your_hf_token               # Windows: setx HF_TOKEN "..."
-python3 skills/growthkit/scripts/federation/contribute.py --rows rows.json
+python3 skills/growthkit/scripts/federation/contribute.py
 ```
 
 Your contribution lands as one new content-addressed file
