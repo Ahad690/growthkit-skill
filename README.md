@@ -1,4 +1,29 @@
-# GrowthKit — honest short-form growth for SaaS & apps
+<div align="center">
+
+<img src="assets/mascot.png" width="130" alt="The GrowthKit fox detective, inspecting a chart with a crossed-out fake bar">
+
+# GrowthKit
+
+**marketing numbers you can audit** 🔍
+
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=20&duration=2600&pause=800&color=1F6FEB&center=true&vCenter=true&width=720&height=42&lines=TikTok+%2F+Reels+%2F+Shorts+marketing+that+never+invents+a+number;Your+own+CSV+is+ground+truth+%E2%80%94+estimates+are+bands;Compliance+is+a+hard+gate%2C+not+a+suggestion" alt="GrowthKit — TikTok/Reels/Shorts marketing that never invents a number">
+
+<br/>
+
+![HIGH](https://img.shields.io/badge/HIGH-observed_fact-56d364?style=flat-square&labelColor=0e2818)
+![MEDIUM](https://img.shields.io/badge/MEDIUM-estimate_band-e8c66b?style=flat-square&labelColor=3a2806)
+![LOW](https://img.shields.io/badge/LOW-thin_data-f0883e?style=flat-square&labelColor=4a2208)
+![NONE](https://img.shields.io/badge/NONE-refuses_to_guess-f85149?style=flat-square&labelColor=4a0a14)
+
+<br/>
+
+<img src="assets/demo-growth-plan.png" width="860" alt="A rendered growth-plan.html — positioning, script calendar with disclosure blocks, and a metrics table where every number carries confidence, method, and sources">
+
+*The deliverable: every number in the plan carries its confidence, method, and sources.*
+
+</div>
+
+<br/>
 
 An open-source [Claude Code](https://claude.com/claude-code) skill that helps any
 SaaS/app founder run a short-form-video-led growth motion (**TikTok-first**, with
@@ -192,3 +217,7 @@ deliverable, append-only local data, and an opt-in federated dataset:
 
 Contributions welcome — see [CONTRIBUTORS.md](CONTRIBUTORS.md) and
 [DATA_POLICY.md](DATA_POLICY.md).
+
+<div align="center">
+<img src="https://capsule-render.vercel.app/api?type=waving&height=90&color=0:1f6feb,100:8957e5&section=footer" alt="" width="100%">
+</div>
