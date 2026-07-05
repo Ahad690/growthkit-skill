@@ -39,6 +39,8 @@ precisely (dollar-perfect organic attribution, panel-grade competitor stats).
 
 ## The honesty model (why this is different)
 
+<img src="assets/mascot-shrug.png" width="150" align="right" alt="The GrowthKit fox shrugging with empty paws — when there's no data, it says so">
+
 - **The model never emits a market/performance number.** Views, completion rate,
   followers, installs, CAC, LTV, hashtag volume — these come ONLY from
   deterministic scripts run on **your own real exports**, or from a clearly-labeled
@@ -212,12 +214,20 @@ deliverable, append-only local data, and an opt-in federated dataset:
 
 ## License
 
+<img src="assets/mascot-hug.png" width="130" align="right" alt="The GrowthKit fox hugging a pull-request icon">
+
 - **Code:** MIT ([LICENSE](LICENSE))
 - **Data & docs:** CC-BY-4.0 ([LICENSE-DATA](LICENSE-DATA))
 
 Contributions welcome — see [CONTRIBUTORS.md](CONTRIBUTORS.md) and
-[DATA_POLICY.md](DATA_POLICY.md).
+[DATA_POLICY.md](DATA_POLICY.md). Even a ⭐ helps others find the honest way
+to do this.
+
+<br clear="right">
 
 <div align="center">
+<img src="assets/mascot-sleep.png" width="120" alt="The GrowthKit fox asleep on a closed report folder, zzz">
+<br>
+<sub><code>~ end of file · no numbers were invented in this README ~</code></sub>
 <img src="https://capsule-render.vercel.app/api?type=waving&height=90&color=0:1f6feb,100:8957e5&section=footer" alt="" width="100%">
 </div>
