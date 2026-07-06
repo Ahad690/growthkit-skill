@@ -4,9 +4,13 @@
 
 # GrowthKit
 
-**marketing numbers you can audit** 🔍
+**every "growth hack" tool fakes its numbers. this one shows the receipts.** 🔍
 
 <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=600&size=20&duration=2600&pause=800&color=1F6FEB&center=true&vCenter=true&width=720&height=42&lines=TikTok+%2F+Reels+%2F+Shorts+marketing+that+never+invents+a+number;Your+own+CSV+is+ground+truth+%E2%80%94+estimates+are+bands;Compliance+is+a+hard+gate%2C+not+a+suggestion" alt="GrowthKit — TikTok/Reels/Shorts marketing that never invents a number">
+
+<br/>
+
+**84 tests · confidence + method + sources on every metric · 0 numbers guessed**
 
 <br/>
 
