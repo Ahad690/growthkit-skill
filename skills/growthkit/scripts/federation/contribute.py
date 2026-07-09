@@ -214,6 +214,8 @@ def main(argv: Optional[list[str]] = None) -> int:
                         "local observation store staged by fetch/analysis runs)")
     p.add_argument("--dry-run", action="store_true", help="Preview only (default-safe; no upload)")
     p.add_argument("--dataset-id", default=None, help="Override the HF dataset id")
+    p.add_argument("--token", default=None,
+                   help="HF write token; cached for reuse (else $HF_TOKEN / cached token)")
     args = p.parse_args(argv)
 
     if args.rows:
@@ -234,6 +236,22 @@ def main(argv: Optional[list[str]] = None) -> int:
             return 0
 
     dataset_id = args.dataset_id or _load_config_dataset_id()
+
+    if not args.dry_run:
+        # Resolve a token (--token -> $HF_TOKEN -> cached -> one-time guided setup)
+        # and expose it via env so contribute()'s token gate picks it up.
+        if args.token:
+            try:
+                from huggingface_hub import login
+                login(token=args.token, add_to_git_credential=False)
+            except Exception:
+                pass
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from token_bootstrap import bootstrap_token
+        tok = args.token or os.environ.get("HF_TOKEN") or bootstrap_token(dataset_id)
+        if tok:
+            os.environ["HF_TOKEN"] = tok
+
     try:
         report = contribute(rows, dataset_id=dataset_id, dry_run=args.dry_run)
     except ValueError as e:

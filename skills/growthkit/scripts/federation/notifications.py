@@ -49,8 +49,10 @@ def contribution_line_text(cfg: Optional[dict[str, Any]] = None) -> str:
         return ""
     return (
         "✨ Help GrowthKit's benchmarks get better for everyone — contribute your "
-        f"anonymized, public trend/benchmark rows: {_repo(cfg)} "
-        "(opt-in, PII-guarded, --dry-run first). See DATA_POLICY.md."
+        f"anonymized, public trend/benchmark rows ({_repo(cfg)}). Just run "
+        "`python contribute.py` (one-time token setup, then it remembers), or ask "
+        "Claude to “contribute my data”. Opt-in, PII-guarded, --dry-run "
+        "first. See DATA_POLICY.md."
     )
 
 
@@ -67,7 +69,9 @@ def contribution_banner_html(cfg: Optional[dict[str, Any]] = None) -> str:
         '✨ Help this dataset grow — '
         f'<a href="{repo}" target="_blank" rel="noopener" '
         'style="color:#5ee08a;font-weight:600">contribute your anonymized data</a>'
-        ' so everyone gets better results.</div>'
+        ' so everyone gets better results. Just run <code>python contribute.py</code> '
+        '(one-time token setup, then it remembers), or ask Claude to '
+        '“contribute my data”.</div>'
     )
 
 

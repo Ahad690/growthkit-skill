@@ -166,9 +166,15 @@ the deliverable was written (`growth-plan.html`).
 Every fetch/analysis run automatically STAGES its shareable observations in the
 append-only local store (`data/observations.local.json` — rows are only ever
 added, never deleted; contribution does not clear it). When the user wants to
-contribute, run `scripts/federation/contribute.py --dry-run` — it reads the
-store by default and previews the ONLY data that may leave the machine: public,
-anonymized trend/benchmark rows. `assert_public_only` aborts on any
+contribute (e.g. "contribute my data", "share it"), run `python contribute.py`
+from the repo root — it reads the store by default and previews the ONLY data
+that may leave the machine: public, anonymized trend/benchmark rows. If it prints
+the token-setup guidance and a `huggingface.co/settings/tokens/new` link (no
+token cached yet), relay that link, tell them to create a fine-grained token with
+**Write** on `Ahad690/growthkit-trends`, then re-run with the paste: `python
+contribute.py --token <pasted>` (cached, one-time). Always show the `--dry-run`
+preview and confirm before the real upload; never store/echo the token anywhere
+but the command. `assert_public_only` aborts on any
 identifying/owned field. Each contribution is written as one new
 content-addressed file `contributions/<author>-<hash>.json` (append-only;
 never rewrites existing data) and opened as a PR; a guarded auto-merge bot
