@@ -22,10 +22,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
 from typing import Any, Optional
+
+# Diagnostics go to stderr so they never contaminate the JSON on stdout.
+log = logging.getLogger("growthkit.fetch_trends")
 
 try:  # requests is optional; absence => graceful fallback, never a crash.
     import requests  # type: ignore
@@ -110,24 +114,53 @@ def _fallback(country: str, industry_id: str, cache: Optional[dict[str, Any]], r
     }
 
 
+# A real desktop Chrome UA. Headless Chromium's default UA advertises
+# "HeadlessChrome", which Creative Center answers with 403 and a 39-byte body —
+# so acquisition could never see any request at all. The same URL returns 200 to
+# an ordinary UA from the very same host, so this is a browser-misconfiguration
+# fix, not an attempt to defeat a protection.
+_DESKTOP_UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+               "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+
+# The signature triple below appears RETIRED. Observed 2026-07-25: with the page
+# loading correctly (200, ~93 KB), its own API calls —
+# ``/creative_radar_api/v1/user/info`` and ``/cc_portal_api/api/trendsTcc`` —
+# carry no signature headers whatsoever, only Content-Type / Accept /
+# Agw-Js-Conv. So acquisition legitimately returns None on the current site, the
+# live path degrades to the labeled fallback, and re-enabling live trends means
+# reimplementing against those endpoints rather than harvesting headers.
+_WANTED_SIGNATURE_HEADERS = ("anonymous-user-id", "timestamp", "user-sign")
+
+
 def acquire_headers() -> Optional[dict[str, str]]:
     """Acquire Creative Center signature headers via a headless browser.
 
-    Runs the Creative Center page in Playwright and intercepts
-    XMLHttpRequest.setRequestHeader to capture anonymous-user-id / timestamp /
-    user-sign. Returns None if Playwright is not installed or acquisition fails
-    — callers then degrade to the labeled fallback. Optional dependency by
-    design (the skill works without live trends).
+    Loads the Creative Center page in Playwright with a realistic desktop
+    context and intercepts ``XMLHttpRequest.setRequestHeader`` to capture
+    anonymous-user-id / timestamp / user-sign. Returns None when Playwright is
+    absent, the page does not load, or the headers are simply not present
+    anymore (see the note above) — callers then degrade to the labeled fallback.
+    Optional dependency by design: the skill works without live trends.
+
+    Diagnostics are logged rather than swallowed, because a silent None here is
+    indistinguishable from "site changed" and cost real debugging time.
     """
     try:
         from playwright.sync_api import sync_playwright  # type: ignore
     except Exception:
+        log.warning("acquire_headers: playwright not installed (pip install playwright "
+                    "&& playwright install chromium)")
         return None
     try:  # pragma: no cover - requires a browser; not exercised in CI.
         captured: dict[str, str] = {}
+        status: object = "?"
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            context = browser.new_context(
+                user_agent=_DESKTOP_UA, locale="en-US",
+                viewport={"width": 1440, "height": 900},
+            )
+            page = context.new_page()
             page.add_init_script(
                 """
                 const orig = XMLHttpRequest.prototype.setRequestHeader;
@@ -138,15 +171,26 @@ def acquire_headers() -> Optional[dict[str, str]]:
                 };
                 """
             )
-            page.goto("https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/en",
-                      wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)
+            resp = page.goto(
+                "https://ads.tiktok.com/business/creativecenter/inspiration/popular/hashtag/pc/en",
+                wait_until="domcontentloaded", timeout=40000)
+            status = resp.status if resp is not None else "?"
+            page.wait_for_timeout(6000)
             captured = page.evaluate("window.__ccHeaders") or {}
+            context.close()
             browser.close()
-        wanted = ("anonymous-user-id", "timestamp", "user-sign")
-        headers = {k: v for k, v in captured.items() if k.lower() in wanted}
+        headers = {k: v for k, v in captured.items()
+                   if k.lower() in _WANTED_SIGNATURE_HEADERS}
+        if not headers:
+            log.warning(
+                "acquire_headers: page status=%s, saw %d XHR header(s) %s but none of "
+                "%s — the signature scheme looks retired; live trends stay on the "
+                "labeled fallback.",
+                status, len(captured), sorted(captured), list(_WANTED_SIGNATURE_HEADERS),
+            )
         return headers or None
-    except Exception:
+    except Exception as exc:
+        log.warning("acquire_headers failed: %s: %s", type(exc).__name__, exc)
         return None
 
 
@@ -226,6 +270,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--no-save", action="store_true",
                    help="Skip persisting a successful fetch to the local cache/store")
     args = p.parse_args(argv)
+
+    # Surface acquisition diagnostics on stderr; stdout stays pure JSON.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s",
+                        stream=sys.stderr)
 
     if not args.no_warning:
         print(TOS_WARNING, file=sys.stderr)
