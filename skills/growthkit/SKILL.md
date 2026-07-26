@@ -96,9 +96,22 @@ Combine with ICP to pick the playbook: (B2C-install | B2B-leadgen) × (TikTok-na
   Report ranked winners, flagged hook failures, and per-post metrics — all
   `confidence: HIGH`, `sources: ["owned_csv"]`. This is the reliable layer.
 - **Creative Center fetcher (FR10, optional):** only if the user wants live
-  trends, run `python3 ${CLAUDE_SKILL_DIR}/scripts/fetch_trends.py --country XX`.
-  Surface the ToS warning on first use. On failure it returns a labeled fallback
-  (`fetch_failed`) — present it as such, NEVER as fresh data, and continue.
+  TikTok trends, run `python3 ${CLAUDE_SKILL_DIR}/scripts/fetch_trends.py
+  --country XX`. Surface the ToS warning on first use. On failure it returns a
+  labeled fallback (`fetch_failed`) — present it as such, NEVER as fresh data,
+  and continue. As of 2026-07 its live path is dark: Creative Center retired the
+  signature headers the fetcher harvests, so it reports that and falls back.
+- **YouTube benchmarks (optional, official API):** `python3
+  ${CLAUDE_SKILL_DIR}/scripts/fetch_youtube_trends.py --country XX` reads the
+  `mostPopular` chart via the YouTube Data API and returns **observed aggregate**
+  short-form benchmarks — median views, like/comment/engagement rates, median
+  duration, and what share of trending content is short-form. Prefer this when
+  the user wants live external signal: it is a versioned, documented API, so it
+  works unattended. Needs `$YOUTUBE_API_KEY`; without one it reports
+  `no_api_key` and stages nothing. Rates are medians of per-video rates, so
+  present them as "median among the ~50 videos trending in that region" — a
+  sample of what is trending, never a platform-wide claim. Each run also emits a
+  `sample_size` row; cite it alongside the metrics.
 - **Keyword Insights (FR11):** explicitly unsupported — say so if asked.
 
 ### Step 5 — Measurement
