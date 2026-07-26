@@ -37,8 +37,18 @@ BANNED = [
     "ip", "ip_address", "user_id", "post_id", "views", "likes", "comments",
 ]
 
-VALID_DATA_TYPES = ["hashtag_trend", "sound_trend", "perf_benchmark"]
-VALID_SOURCES = ["creative_center", "aggregated_owned"]
+# Vocabulary is an ALLOW-LIST on purpose: a new kind of row has to be registered
+# deliberately, so nobody can widen what the dataset means by accident.
+#
+# `trending_benchmark` is kept distinct from `perf_benchmark` rather than folded
+# into it. They are not the same claim: perf_benchmark comes from a contributor's
+# OWN exports, while trending_benchmark is a median over a sample of what is
+# trending in a region. Pooling them would let a sample-of-trending statistic be
+# read as measured own-account performance.
+VALID_DATA_TYPES = ["hashtag_trend", "sound_trend", "perf_benchmark",
+                    "trending_benchmark"]
+VALID_SOURCES = ["creative_center", "aggregated_owned", "youtube_data_api"]
+VALID_PLATFORMS = ["tiktok", "youtube"]
 
 GROWTHKIT_SCHEMA: dict[str, Any] = {
     "keep": SHAREABLE,
@@ -47,7 +57,7 @@ GROWTHKIT_SCHEMA: dict[str, Any] = {
     "numeric": {"metric_value": {"min": 0}, "period_days": {"min": 1, "max": 365}},
     "list_fields": [],
     "enum": {"data_type": VALID_DATA_TYPES, "source": VALID_SOURCES,
-             "platform": ["tiktok"]},
+             "platform": VALID_PLATFORMS},
     "forbidden": BANNED,
 }
 

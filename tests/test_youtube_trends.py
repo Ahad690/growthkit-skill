@@ -116,3 +116,27 @@ def test_category_id_becomes_the_industry_dimension():
         r = yt.fetch_youtube_trends(country="US", category_id="20")
     rows = yt.observations_from_result(r)
     assert rows and {row["industry"] for row in rows} == {"yt_category_20"}
+
+
+def test_youtube_rows_pass_the_federation_validator():
+    """The vocabulary allow-list must actually admit these rows — otherwise the
+    collector stages data that can never be contributed (it silently did at
+    first: bad_data_type / bad_source / platform not in ['tiktok'])."""
+    from federation.contribute import validate_shareable
+    payload = {"items": [_item(1000, 100, 10), _item(2000, 100, 20, "PT2M")]}
+    with mock.patch.object(yt, "resolve_api_key", return_value="k"), \
+         mock.patch.object(yt.requests, "get", return_value=_Resp(payload)):
+        r = yt.fetch_youtube_trends(country="US")
+    rows = yt.observations_from_result(r)
+    assert rows
+    for row in rows:
+        assert validate_shareable(row) == [], (row, validate_shareable(row))
+
+
+def test_trending_benchmark_stays_distinct_from_perf_benchmark():
+    """A median over trending videos is not measured own-account performance;
+    keeping the types separate stops one being read as the other."""
+    from federation.validate import VALID_DATA_TYPES
+    assert "trending_benchmark" in VALID_DATA_TYPES
+    assert "perf_benchmark" in VALID_DATA_TYPES
+    assert "trending_benchmark" != "perf_benchmark"
